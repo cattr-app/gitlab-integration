@@ -21,6 +21,9 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
         'item.edit.task' => [
             'Modules\GitlabIntegration\Listeners\IntegrationObserver@taskEdition',
         ],
+        'item.remove.task' => [
+            'Modules\GitlabIntegration\Listeners\IntegrationObserver@taskDeletion',
+        ],
     ];
 
     /**
