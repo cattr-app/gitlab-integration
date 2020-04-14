@@ -35,6 +35,25 @@ class IntegrationObserver
     }
 
     /**
+     * Observe task deletion
+     *
+     * @param $task
+     *
+     * @return mixed
+     */
+    public function taskDeletion($task)
+    {
+        $relation = DB::table('gitlab_tasks_relations')
+            ->where('task_id', $task->id)
+            ->first();
+        if (isset($relation)) {
+            abort(403, 'Access denied to delete a task from GitLab integration');
+        }
+
+        return $task;
+    }
+
+    /**
      * Observe task list
      *
      * @param Collection|Paginator $tasks
