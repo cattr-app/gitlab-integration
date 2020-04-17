@@ -46,7 +46,10 @@ class GitlabApi
             $this->pager = new ResultPager($this->client);
             $this->pager->fetch($this->client->api('users'), 'me');
         } catch (Throwable $throwable) {
-            if (strpos($throwable->getMessage(), 'Your account has been blocked')) {
+            if ($throwable->getMessage() === 'invalid_token') {
+                $this->userProperties->removeApiKey($user->id);
+                Log::info('Removing user GitLab API key due to expiration of key');
+            } elseif (strpos($throwable->getMessage(), 'Your account has been blocked')) {
                 $this->userProperties->removeApiKey($user->id);
                 Log::info('Removing user GitLab API key due to account block');
             } else {
