@@ -29,6 +29,8 @@ class SettingsService
     }
 
     /**
+     * Returns the period of the synchronization time.
+     *
      * @return mixed
      */
     public function getTimeSyncPeriod()

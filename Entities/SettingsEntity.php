@@ -4,7 +4,7 @@ namespace Modules\GitlabIntegration\Entities;
 
 class SettingsEntity
 {
-    public const TIME_SYNC_PERIOD_KEY = 'gitlab_sync_time_period';
+    public const TIME_SYNC_PERIOD_KEY = 'gitlab_time_sync_period';
 
     protected const TIME_SYNC_PERIOD_VALUES = [
         'NEVER' => 0,
@@ -15,6 +15,8 @@ class SettingsEntity
     ];
 
     /**
+     * Get the value for the sync time period by key.
+     *
      * @param $key
      * @return int
      */
@@ -24,6 +26,8 @@ class SettingsEntity
     }
 
     /**
+     * Get the key for the sync time period by value.
+     *
      * @param $value
      * @return false|int
      */
