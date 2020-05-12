@@ -33,8 +33,8 @@ class SettingsService
      *
      * @return mixed
      */
-    public function getTimeSyncPeriod()
+    public function getTimeSyncPeriod(): int
     {
-        return $this->settingsRepository->getByPropertyName(SettingsEntity::TIME_SYNC_PERIOD_KEY);
+        return (int) $this->settingsRepository->getByPropertyName(SettingsEntity::TIME_SYNC_PERIOD_KEY);
     }
 }

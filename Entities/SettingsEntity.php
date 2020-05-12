@@ -22,7 +22,7 @@ class SettingsEntity
      */
     public function getTimeSyncPeriodValueByKey($key): int
     {
-        return self::TIME_SYNC_PERIODS[$key];
+        return self::TIME_SYNC_PERIOD_VALUES[$key];
     }
 
     /**
@@ -33,6 +33,6 @@ class SettingsEntity
      */
     public function getTimeSyncPeriodKeyByValue($value): int
     {
-        return array_search($value, self::TIME_SYNC_PERIODS);
+        return array_search($value, self::TIME_SYNC_PERIOD_VALUES);
     }
 }
