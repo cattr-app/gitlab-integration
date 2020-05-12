@@ -41,6 +41,6 @@ class SettingsRepository
         ])
             ->first();
 
-        return $property ? $property->value : $this->settingsEntity->getTimeSyncPeriodValueByKey('NEVER');
+        return $property->value; 
     }
 }
