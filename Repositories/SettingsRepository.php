@@ -11,20 +11,15 @@ class SettingsRepository
      * @var Property
      */
     protected Property $model;
-    /**
-     * @var SettingsEntity
-     */
-    protected SettingsEntity $settingsEntity;
 
     /**
      * SettingsRepository constructor.
      * @param Property $property
      * @param SettingsEntity $settingsEntity
      */
-    public function __construct(Property $model, SettingsEntity $settingsEntity)
+    public function __construct(Property $model)
     {
         $this->model = $model;
-        $this->settingsEntity = $settingsEntity;
     }
 
     /**
