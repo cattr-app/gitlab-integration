@@ -73,7 +73,7 @@ class Synchronizer
         foreach ($gitlabProjects as $gitlabProject) {
             $projectMapping = [
                 self::COMPANY_ID => 0,
-                self::NAME => $gitlabProject['name'] ?? 'Gitlab Project without Name ?!',
+                self::NAME => $gitlabProject['name_with_namespace'] ?? 'Gitlab Project without Name ?!',
                 self::DESCRIPTION => $gitlabProject['description'] ?? '',
                 self::IMPORTANT => false,
                 self::SOURCE => 'gitlab',
