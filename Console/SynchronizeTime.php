@@ -13,7 +13,7 @@ class SynchronizeTime extends Command
      *
      * @var string
      */
-    protected $name = 'gitlab:time:sync';
+    protected $name = 'gitlab:sync-time';
 
     /**
      * The console command description.
