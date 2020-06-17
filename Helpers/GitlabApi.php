@@ -7,6 +7,7 @@ use App\Models\User;
 use Gitlab\Client;
 use Gitlab\ResultPager;
 use Illuminate\Support\Facades\Log;
+use Modules\GitlabIntegration\Services\SettingsService;
 use Throwable;
 
 class GitlabApi
@@ -17,10 +18,12 @@ class GitlabApi
     protected string $apiKey;
     protected Client $client;
     protected ResultPager $pager;
+    protected SettingsService $settings;
 
-    public function __construct(UserProperties $userProperties)
+    public function __construct(UserProperties $userProperties, SettingsService $settings)
     {
         $this->userProperties = $userProperties;
+        $this->settings = $settings;
     }
 
     public static function buildFromUser(User $user): ?GitlabApi
@@ -31,12 +34,10 @@ class GitlabApi
     protected function init(User $user): ?GitlabApi
     {
         $this->user = $user;
-        $url = Property::where(['entity_type' => 'company', 'name' => 'gitlab_url'])->first();
-        if (!$url) {
-            return null;
-        }
-        $this->apiUrl = $url->value ?? '';
+
+        $this->apiUrl = $this->settings->getApiUrl();
         $this->apiKey = $this->userProperties->getApiKey($user->id);
+
         if (empty($this->apiUrl) || empty($this->apiKey)) {
             return null;
         }
@@ -53,7 +54,7 @@ class GitlabApi
                 $this->userProperties->removeApiKey($user->id);
                 Log::info('Removing user GitLab API key due to account block');
             } else {
-                Log::error($throwable);
+                Log::error($throwable->getMessage());
             }
             return null;
         }

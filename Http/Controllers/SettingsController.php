@@ -3,92 +3,69 @@
 namespace Modules\GitlabIntegration\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\Property;
-use Gitlab\Client;
-use Gitlab\ResultPager;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Modules\GitlabIntegration\Helpers\UserProperties;
-use Throwable;
+use Modules\GitlabIntegration\Http\Requests\Setting\UpdateSettingsRequest;
+use Modules\GitlabIntegration\Services\SettingsService;
 
 class SettingsController extends Controller
 {
+    /**
+     * @var SettingsService
+     */
+    protected SettingsService $settings;
 
-    protected Client $client;
-    protected $apiUrl;
-    private UserProperties $userProperties;
-
-    public function __construct(UserProperties $userProperties, Client $client)
+    /**
+     * SettingsController constructor.
+     * @param $settings
+     */
+    public function __construct(SettingsService $settings)
     {
-        $this->client = $client;
-        $this->apiUrl = Property::where(['entity_type' => 'company', 'name' => 'gitlab_url'])->first();
-        $this->apiUrl = $this->apiUrl ? $this->apiUrl->value : null;
-        $this->userProperties = $userProperties;
-
         parent::__construct();
+
+        $this->settings = $settings;
     }
 
+    /**
+     * Returns controller rules.
+     *
+     * @return array
+     */
     public static function getControllerRules(): array
     {
         return [
-            'get' => 'integration.gitlab',
-            'set' => 'integration.gitlab',
+            'index' => 'integration.gitlab-settings',
+            'update' => 'integration.gitlab-settings'
         ];
     }
 
-    public function get(Request $request): array
+    /**
+     * Get all settings.
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
     {
-        $userId = $request->user()->id;
-        $apiKey = $this->userProperties->getApiKey($userId);
-        $hiddenKey = (bool)$apiKey
-            ? preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $apiKey)
-            : $apiKey;
+        $settings = $this->settings->all();
 
-        return [
-            'enabled' => (bool)Property::where(['entity_type' => Property::COMPANY_CODE, 'name' => 'gitlab_enabled'])
-                    ->first()
-                    ->value ?? false,
-            'apikey' => $hiddenKey
-        ];
+        return new JsonResponse([
+            'success' => true,
+            'data' => $settings
+        ]);
     }
 
-    public function set(Request $request): JsonResponse
+    /**
+     * Update the settings.
+     *
+     * @param UpdateSettingsRequest $request
+     * @return JsonResponse
+     */
+    public function update(UpdateSettingsRequest $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        if (empty(trim($request->input('apikey')))) {
-            $apiKey = $this->userProperties->getApiKey($userId) ?? null;
-            if ($apiKey) {
-                $this->userProperties->removeApiKey($userId);
-                return new JsonResponse(['success' => 'true', 'message' => 'API Key is removed']);
-            }
-        }
+        $settings = $this->settings->set($request->validated());
 
-        try {
-            Validator::make(
-                $request->all(),
-                [
-                    'apikey' => 'string|required'
-                ]
-            );
-
-            $client = Client::create($this->apiUrl)
-                ->authenticate($request->input('apikey'), Client::AUTH_URL_TOKEN);
-
-            $fetcher = new ResultPager($client);
-            $fetcher->fetch($client->api('users'), 'me');
-        } catch (Throwable $throwable) {
-            return new JsonResponse([
-                'error' => 'Validation fail',
-                'message' => 'Invalid API Key'
-            ], 400);
-        }
-
-        if (strpos($request->post('apikey'), '*') !== false) {
-            return new JsonResponse(['success' => 'true', 'message' => 'Nothing to update!']);
-        }
-        $this->userProperties->setApiKey($userId, $request->post('apikey'));
-
-        return new JsonResponse(['success' => 'true', 'message' => 'Settings saved successfully']);
+        return new JsonResponse([
+            'success' => true,
+            'data' => $settings
+        ]);
     }
 }

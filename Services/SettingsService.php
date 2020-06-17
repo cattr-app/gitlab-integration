@@ -2,30 +2,72 @@
 
 namespace Modules\GitlabIntegration\Services;
 
-use Modules\GitlabIntegration\Entities\SettingsEntity;
-use Modules\GitlabIntegration\Repositories\SettingsRepository;
+use App\Contracts\Settings;
 
 class SettingsService
 {
     /**
-     * @var SettingsRepository
+     *
      */
-    protected SettingsRepository $settingsRepository;
-
+    protected const MODULE_NAME = 'gitlab';
     /**
-     * @var SettingsEntity
+     * @var Settings
      */
-    protected SettingsEntity $settingsEntity;
+    protected Settings $settings;
 
     /**
      * SettingsService constructor.
-     * @param SettingsRepository $settingsRepository
-     * @param SettingsEntity $settingsEntity
+     * @param Settings $settings
      */
-    public function __construct(SettingsRepository $settingsRepository, SettingsEntity $settingsEntity)
+    public function __construct(Settings $settings)
     {
-        $this->settingsRepository = $settingsRepository;
-        $this->settingsEntity = $settingsEntity;
+        $this->settings = $settings;
+    }
+
+    /**
+     * @return array
+     */
+    public function all(): array
+    {
+        return $this->settings->all(self::MODULE_NAME);
+    }
+
+    /**
+     * @param string $key
+     * @param null $default
+     * @return mixed
+     */
+    public function get(string $key, $default = null)
+    {
+        return $this->settings->get(self::MODULE_NAME, $key, $default);
+    }
+
+    /**
+     * @param $key
+     * @param null $value
+     * @return array
+     */
+    public function set($key, $value = null): array
+    {
+        return $this->settings->set(self::MODULE_NAME, $key, $value);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isEnabled(): bool
+    {
+        return $this->settings->get(self::MODULE_NAME, 'enabled', false);
+    }
+
+    /**
+     * Returns Gitlab api url.
+     *
+     * @return string
+     */
+    public function getApiUrl(): string
+    {
+        return $this->settings->get(self::MODULE_NAME, 'url');
     }
 
     /**
@@ -35,6 +77,6 @@ class SettingsService
      */
     public function getTimeSyncPeriod(): int
     {
-        return (int) $this->settingsRepository->getByPropertyName(SettingsEntity::TIME_SYNC_PERIOD_KEY);
+        return $this->settings->get(self::MODULE_NAME, 'time_sync_period');
     }
 }

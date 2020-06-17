@@ -105,5 +105,11 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
     {
         $this->app->register(ScheduleServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
+
+        $this->app->when(\Modules\GitlabIntegration\Services\SettingsService::class)
+            ->needs(\App\Contracts\Settings::class)
+            ->give(function () {
+                return new \App\Services\SettingsService(new \Modules\GitlabIntegration\Entities\SettingEntity);
+            });
     }
 }

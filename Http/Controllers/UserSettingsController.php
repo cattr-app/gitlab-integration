@@ -1,0 +1,92 @@
+<?php
+
+namespace Modules\GitlabIntegration\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Gitlab\Client;
+use Gitlab\ResultPager;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Modules\GitlabIntegration\Helpers\UserProperties;
+use Modules\GitlabIntegration\Services\SettingsService;
+use Throwable;
+
+class UserSettingsController extends Controller
+{
+    protected Client $client;
+    protected SettingsService $settings;
+    protected UserProperties $userProperties;
+
+    public function __construct(UserProperties $userProperties, Client $client, SettingsService $settings)
+    {
+        parent::__construct();
+
+        $this->client = $client;
+        $this->userProperties = $userProperties;
+        $this->settings = $settings;
+    }
+
+    public static function getControllerRules(): array
+    {
+        return [
+            'index' => 'integration.gitlab',
+            'update' => 'integration.gitlab',
+        ];
+    }
+
+    public function index(Request $request): array
+    {
+        $userId = $request->user()->id;
+        $apiKey = $this->userProperties->getApiKey($userId);
+        $hiddenKey = (bool)$apiKey
+            ? preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $apiKey)
+            : $apiKey;
+
+        $integrationEnabled = $this->settings->isEnabled();
+
+        return [
+            'success' => true,
+            'data' => [
+                'api_key' => $hiddenKey,
+                'enabled' => $integrationEnabled,
+            ]
+        ];
+    }
+
+    public function update(Request $request): JsonResponse
+    {
+        $request->validate([
+            'api_key' => 'sometimes|required|string'
+        ]);
+
+        $userId = $request->user()->id;
+        if (empty(trim($request->input('api_key')))) {
+            $apiKey = $this->userProperties->getApiKey($userId) ?? null;
+            if ($apiKey) {
+                $this->userProperties->removeApiKey($userId);
+                return new JsonResponse(['success' => 'true', 'message' => 'API Key removed']);
+            }
+        }
+
+        if (strpos($request->post('api_key'), '*') !== false) {
+            return new JsonResponse(['success' => true, 'message' => 'Nothing to update!']);
+        }
+
+        try {
+            $client = Client::create($this->settings->getApiUrl())
+                ->authenticate($request->input('api_key'), Client::AUTH_URL_TOKEN);
+
+            $fetcher = new ResultPager($client);
+            $fetcher->fetch($client->api('users'), 'me');
+        } catch (Throwable $throwable) {
+            throw ValidationException::withMessages([
+                'api_key' => __('Invalid API key.'),
+            ]);
+        }
+
+        $this->userProperties->setApiKey($userId, $request->post('api_key'));
+
+        return new JsonResponse(['success' => true, 'message' => 'Settings saved successfully']);
+    }
+}
