@@ -1,7 +1,7 @@
 {
     "version": "1.1.0",
     "type": "laravel-module",
-    "name": "amazingcat/gitlabintegration",
+    "name": "amazingcat/gitlabintegration-module",
     "description": "Gitlab Integration",
     "authors": [
         {
