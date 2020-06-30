@@ -95,4 +95,14 @@ class GitlabApi
     {
         return $this->client->issues->addSpentTime($projectId, $issue_iid, $duration);
     }
+
+    public function getUserTime($projectId, $issue_iid)
+    {
+        return (int)$this->client->issues->getTimeStats($projectId, $issue_iid)['total_time_spent'];
+    }
+
+    public function resetUserTime($projectId, $issue_iid)
+    {
+        return $this->client->issues->resetSpentTime($projectId, $issue_iid);
+    }
 }
