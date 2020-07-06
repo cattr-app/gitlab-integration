@@ -57,20 +57,32 @@ class UserSettingsController extends Controller
     public function update(Request $request): JsonResponse
     {
         $request->validate([
-            'api_key' => 'sometimes|required|string'
+            'api_key' => 'string|nullable'
         ]);
 
         $userId = $request->user()->id;
+        $apiKey = $this->userProperties->getApiKey($userId) ?? null;
         if (empty(trim($request->input('api_key')))) {
-            $apiKey = $this->userProperties->getApiKey($userId) ?? null;
             if ($apiKey) {
                 $this->userProperties->removeApiKey($userId);
-                return new JsonResponse(['success' => 'true', 'message' => 'API Key removed']);
+                return new JsonResponse([
+                    'success' => true,
+                    'data' => [
+                        'enabled' => $this->settings->isEnabled(),
+                        'api_key' => '',
+                    ],
+                ]);
             }
         }
 
-        if (strpos($request->post('api_key'), '*') !== false) {
-            return new JsonResponse(['success' => true, 'message' => 'Nothing to update!']);
+        if (strpos(request('api_key'), '*')) {
+            return new JsonResponse([
+                'success' => true,
+                'data' => [
+                    'enabled' => $this->settings->isEnabled(),
+                    'api_key' => preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $apiKey),
+                ],
+            ]);
         }
 
         try {
@@ -85,8 +97,14 @@ class UserSettingsController extends Controller
             ]);
         }
 
-        $this->userProperties->setApiKey($userId, $request->post('api_key'));
+        $token = $this->userProperties->setApiKey(auth()->user()->id, request('api_key'));
 
-        return new JsonResponse(['success' => true, 'message' => 'Settings saved successfully']);
+        return new JsonResponse([
+            'success' => true,
+            'data' => [
+                'enabled' => $this->settings->isEnabled(),
+                'api_key' => preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $token['value']),
+            ],
+        ]);
     }
 }
