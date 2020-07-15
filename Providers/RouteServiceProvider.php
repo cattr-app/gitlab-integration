@@ -18,8 +18,8 @@ class RouteServiceProvider extends ServiceProvider
     public function map(): void
     {
         Route::middleware('api')
-            ->as('v1.integration.gitlab.')
-            ->prefix('v1/integration/gitlab')
+            ->as('integration.gitlab.')
+            ->prefix('integration/gitlab')
             ->namespace($this->moduleNamespace)
             ->group(__DIR__ . '/../Routes/api.php');
     }
