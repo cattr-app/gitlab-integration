@@ -36,6 +36,9 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
         'item.remove.task' => [
             'Modules\GitlabIntegration\Listeners\IntegrationObserver@taskDeletion',
         ],
+        'item.edit.timeinterval' => [
+            'Modules\GitlabIntegration\Listeners\IntegrationObserver@timeintervalEdition',
+        ],
     ];
 
     /**

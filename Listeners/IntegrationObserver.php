@@ -2,11 +2,17 @@
 
 namespace Modules\GitlabIntegration\Listeners;
 
+use App\Models\TimeInterval;
+use App\Models\User;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Modules\GitlabIntegration\Entities\ProjectRelation;
+use Modules\GitlabIntegration\Entities\TaskRelation;
+use Modules\GitlabIntegration\Helpers\GitlabApi;
 
 class IntegrationObserver
 {
@@ -92,5 +98,72 @@ class IntegrationObserver
         }
 
         return $tasks;
+    }
+
+    /**
+     * Observe timeinterval edition
+     *
+     * @param TimeInterval $interval
+     *
+     * @return TimeInterval
+     */
+    public function timeintervalEdition($interval)
+    {
+        // Do nothing if the previous and the new task are the same
+        $prevTaskId = (int)$interval->getOriginal('task_id');
+        $newTaskId = (int)$interval->task_id;
+        if ($prevTaskId === $newTaskId) {
+            return $interval;
+        }
+
+        // Do nothing if the interval haven't associated user
+        $user = User::where(['id' => $interval->user_id])->first();
+        if (!isset($user)) {
+            return $interval;
+        }
+
+        // Do nothing if GitLab integration not activated for the user
+        $api = GitlabApi::buildFromUser($user);
+        if (!isset($api)) {
+            Log::info('Can`t instantiate an API for user ' . $user->full_name . "\n");
+            return $interval;
+        }
+
+        // Do nothing if the interval has not yet been sent
+        $notSynced = DB::table('gitlab_intervals_sync')->where([
+            'time_interval_id' => $interval->id,
+            'is_synced' => 0,
+        ])->first();
+        if (isset($notSynced)) {
+            return $interval;
+        }
+
+        $duration = Carbon::parse($interval->end_at)->diffInSeconds($interval->start_at);
+
+        // Remove interval duration from the previous task
+        /** @var null|TaskRelation $prevTaskRel */
+        $prevTaskRel = TaskRelation::where(['task_id' => $prevTaskId])->first();
+        if (isset($prevTaskRel)) {
+            /** @var null|ProjectRelation $projRel */
+            $projRel = ProjectRelation::where(['project_id' => $prevTaskRel->task->project_id])->first();
+            if (isset($projRel)) {
+                $time = $api->getUserTime($projRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
+                $api->resetUserTime($projRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
+                $api->sendUserTime($projRel->gitlab_id, $prevTaskRel->gitlab_issue_iid, ($time - $duration) . "s");
+            }
+        }
+
+        // Add interval duration to the new task
+        /** @var null|TaskRelation $newTaskRel */
+        $newTaskRel = TaskRelation::where(['task_id' => $newTaskId])->first();
+        if (isset($newTaskRel)) {
+            /** @var null|ProjectRelation $projRel */
+            $projRel = ProjectRelation::where(['project_id' => $newTaskRel->task->project_id])->first();
+            if (isset($projRel)) {
+                $api->sendUserTime($projRel->gitlab_id, $newTaskRel->gitlab_issue_iid, $duration . "s");
+            }
+        }
+
+        return $interval;
     }
 }
