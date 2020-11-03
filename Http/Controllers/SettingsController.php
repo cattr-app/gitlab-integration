@@ -48,7 +48,6 @@ class SettingsController extends Controller
         $settings = $this->settings->all();
 
         return new JsonResponse([
-            'success' => true,
             'data' => $settings
         ]);
     }
@@ -64,7 +63,6 @@ class SettingsController extends Controller
         $settings = $this->settings->set($request->validated());
 
         return new JsonResponse([
-            'success' => true,
             'data' => $settings
         ]);
     }

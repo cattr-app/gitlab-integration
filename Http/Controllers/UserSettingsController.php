@@ -46,7 +46,6 @@ class UserSettingsController extends Controller
         $integrationEnabled = $this->settings->isEnabled();
 
         return [
-            'success' => true,
             'data' => [
                 'api_key' => $hiddenKey,
                 'enabled' => $integrationEnabled,
@@ -66,7 +65,6 @@ class UserSettingsController extends Controller
             if ($apiKey) {
                 $this->userProperties->removeApiKey($userId);
                 return new JsonResponse([
-                    'success' => true,
                     'data' => [
                         'enabled' => $this->settings->isEnabled(),
                         'api_key' => '',
@@ -77,7 +75,6 @@ class UserSettingsController extends Controller
 
         if (strpos(request('api_key'), '*')) {
             return new JsonResponse([
-                'success' => true,
                 'data' => [
                     'enabled' => $this->settings->isEnabled(),
                     'api_key' => preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $apiKey),
@@ -100,7 +97,6 @@ class UserSettingsController extends Controller
         $token = $this->userProperties->setApiKey(auth()->user()->id, request('api_key'));
 
         return new JsonResponse([
-            'success' => true,
             'data' => [
                 'enabled' => $this->settings->isEnabled(),
                 'api_key' => preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $token['value']),
