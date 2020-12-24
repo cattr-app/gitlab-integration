@@ -106,14 +106,16 @@ class Synchronizer
     {
         // Get Gitlab's iids of active user's tasks, to check if they were closed
         $relations = TaskRelation::whereHas('task', static function ($query) use ($userID) {
-            $query->where('user_id', $userID);
+            $query->whereHas('users', static function ($query) use ($userID) {
+                $query->where('id', $userID);
+            });
             $query->where('active', true);
         })->get();
         $iids = $relations->pluck('gitlab_issue_iid')->toArray();
 
         // Fetch closed Gitlab's tasks by iids, and get internal task ids
         $gitlabTasks = $api->getClosedUserTasks($iids);
-        $gitlabIds = array_map(static fn ($task) => (int)$task['id'], $gitlabTasks);
+        $gitlabIds = array_map(static fn($task) => (int)$task['id'], $gitlabTasks);
         $internalIds = $relations->whereIn('gitlab_id', $gitlabIds)->pluck('task_id')->toArray();
 
         if (!empty($internalIds)) {
@@ -166,9 +168,10 @@ class Synchronizer
 
                 $task->task_name = $taskMapping[self::TASK_NAME];
                 $task->description = $taskMapping[self::DESCRIPTION];
-                $task->user_id = $taskMapping[self::USER_ID];
                 $task->active = true;
                 $task->save();
+
+                $task->users()->save(User::first(['id' => $taskMapping[self::USER_ID]]));
             }
         }
     }
