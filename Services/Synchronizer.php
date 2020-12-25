@@ -171,7 +171,7 @@ class Synchronizer
                 $task->active = true;
                 $task->save();
 
-                $task->users()->save(User::where(['id' => $taskMapping[self::USER_ID]])->first());
+                $task->users()->sync([$userID]);
             }
         }
     }
