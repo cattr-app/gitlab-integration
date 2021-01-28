@@ -2,13 +2,16 @@
 
 namespace Modules\GitlabIntegration\Services;
 
+use App\Models\Priority;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use Exception;
 use Log;
 use Modules\GitlabIntegration\Entities\ProjectRelation;
 use Modules\GitlabIntegration\Entities\TaskRelation;
 use Modules\GitlabIntegration\Helpers\GitlabApi;
+use Settings;
 
 class Synchronizer
 {
@@ -125,6 +128,14 @@ class Synchronizer
 
     private function syncTasks(array $gitlabTasks, int $userID): void
     {
+        if (Settings::get('core', 'default_priority_id')) {
+            $defaultPriorityId = Settings::get('core', 'default_priority_id');
+        } elseif (($priority = Priority::query()->first()) !== null) {
+            $defaultPriorityId = $priority->id;
+        } else {
+            throw new Exception('Priorities should be configured to sync tasks.');
+        }
+
         foreach ($gitlabTasks as $gitlabTask) {
             $projectID = ProjectRelation::where('gitlab_id', $gitlabTask['project_id'])->first()->project_id;
             if (!$projectID) {
@@ -140,7 +151,7 @@ class Synchronizer
                 self::ACTIVE => true,
                 self::ASSIGNED_BY => 0,
                 self::URL => $gitlabTask['web_url'] ?? '',
-                self::PRIORITY_ID => 2,
+                self::PRIORITY_ID => $defaultPriorityId,
                 self::IMPORTANT => false,
                 self::USER_ID => $userID,
             ];
