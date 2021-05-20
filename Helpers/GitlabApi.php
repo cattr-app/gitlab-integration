@@ -93,7 +93,12 @@ class GitlabApi
 
     public function sendUserTime($projectId, $issue_iid, $duration)
     {
-        return $this->client->issues->addSpentTime($projectId, $issue_iid, $duration);
+        try {
+            return $this->client->issues->addSpentTime($projectId, $issue_iid, $duration);
+        } catch (Throwable $throwable) {
+            Log::error($throwable->getMessage());
+            return null;
+        }
     }
 
     public function getUserTime($projectId, $issue_iid)

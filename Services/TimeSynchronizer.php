@@ -58,6 +58,7 @@ class TimeSynchronizer
                 $glProjectId = $relation['gl_project_id'];
                 $glIssueIid = $relation['gl_issue_iid'];
                 $response = $this->api->sendUserTime($glProjectId, $glIssueIid, $durations[$taskId]['humanDuration']);
+                if($response !== null){
                 echo 'Sending issue_iid '
                     . $glIssueIid
                     . ' duration '
@@ -68,6 +69,9 @@ class TimeSynchronizer
 
                 if ($response && isset($response['total_time_spent'])) {
                     $this->timeIntervalsHelper->markAsSyncedIntervalByTaskId($taskId);
+                }
+                } else {
+                    continue;
                 }
             }
 
