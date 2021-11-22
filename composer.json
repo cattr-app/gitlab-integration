@@ -1,28 +1,31 @@
 {
-    "version": "2.1.1",
-    "type": "laravel-module",
-    "name": "amazingcat/gitlabintegration-module",
-    "description": "Gitlab Integration for Cattr",
-    "authors": [
-        {
-            "name": "AmazingCat",
-            "email": "to@amazingcat.net"
-        }
-    ],
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Modules\\GitlabIntegration\\Providers\\GitlabIntegrationServiceProvider"
-            ],
-            "aliases": []
-        }
-    },
-    "autoload": {
-        "psr-4": {
-            "Modules\\GitlabIntegration\\": ""
-        }
-    },
-    "require": {
-        "m4tthumphrey/php-gitlab-api": "^9.15"
+  "version": "2.2.0",
+  "type": "laravel-module",
+  "name": "amazingcat/gitlabintegration-module",
+  "description": "Gitlab Integration for Cattr",
+  "authors": [
+    {
+      "name": "AmazingCat",
+      "email": "to@amazingcat.net"
     }
+  ],
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Modules\\GitlabIntegration\\Providers\\GitlabIntegrationServiceProvider"
+      ],
+      "aliases": []
+    }
+  },
+  "autoload": {
+    "psr-4": {
+      "Modules\\GitlabIntegration\\": ""
+    }
+  },
+  "require": {
+    "m4tthumphrey/php-gitlab-api": "^11.4"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest"
+  }
 }
