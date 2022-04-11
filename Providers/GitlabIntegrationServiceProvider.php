@@ -2,8 +2,8 @@
 
 namespace Modules\GitlabIntegration\Providers;
 
-use App\Contracts\Settings;
-use App\EventFilter\EventServiceProvider as ServiceProvider;
+use Settings;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Filter;
 use Modules\GitlabIntegration\Console\SynchronizeTime;
 use Modules\GitlabIntegration\Console\Syncronize;
@@ -49,7 +49,6 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerTranslations();
-        $this->registerConfig();
         $this->registerCommands();
         $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
 
@@ -78,20 +77,6 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
     }
 
     /**
-     * Register config.
-     */
-    protected function registerConfig(): void
-    {
-        $this->publishes([
-            module_path($this->moduleName, 'Config/config.php') => config_path($this->moduleNameLower . '.php'),
-        ], 'config');
-        $this->mergeConfigFrom(
-            module_path($this->moduleName, 'Config/config.php'),
-            $this->moduleNameLower
-        );
-    }
-
-    /**
      * Register command
      */
     protected function registerCommands(): void
@@ -109,11 +94,5 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
     {
         $this->app->register(ScheduleServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
-
-        $this->app->when(SettingsService::class)
-            ->needs(Settings::class)
-            ->give(function () {
-                return new \App\Services\SettingsService(new SettingEntity);
-            });
     }
 }

@@ -12,6 +12,7 @@ use Modules\GitlabIntegration\Entities\ProjectRelation;
 use Modules\GitlabIntegration\Entities\TaskRelation;
 use Modules\GitlabIntegration\Helpers\GitlabApi;
 use Settings;
+use Throwable;
 
 class Synchronizer
 {
@@ -29,6 +30,9 @@ class Synchronizer
     public const URL = 'url';
     public const PRIORITY_ID = 'priority_id';
 
+    /**
+     * @throws Exception
+     */
     public function synchronizeAll(): void
     {
         foreach (User::where('active', 1)->get() as $user) {
@@ -36,6 +40,9 @@ class Synchronizer
         }
     }
 
+    /**
+     * @throws Exception
+     */
     public function synchronize(User $user): bool
     {
         $api = GitlabApi::buildFromUser($user);
@@ -48,7 +55,7 @@ class Synchronizer
 
         try {
             $gitlabProjects = $api->getUserProjects();
-        } catch (\Throwable $throwable) {
+        } catch (Throwable $throwable) {
             Log::error('Projects cant be fetched for user ' . $user->full_name . "\n");
             Log::error($throwable);
             echo 'Projects cant be fetched for user ' . $user->full_name . "\n";
@@ -59,7 +66,7 @@ class Synchronizer
 
         try {
             $gitlabTasks = $api->getUserTasks();
-        } catch (\Throwable $throwable) {
+        } catch (Throwable $throwable) {
             Log::error('Tasks cant be fetched for user ' . $user->full_name . "\n");
             Log::error($throwable);
             echo 'Tasks cant be fetched for user ' . $user->full_name . "\n";
@@ -128,8 +135,8 @@ class Synchronizer
 
     private function syncTasks(array $gitlabTasks, int $userID): void
     {
-        if (Settings::get('core', 'default_priority_id')) {
-            $defaultPriorityId = Settings::get('core', 'default_priority_id');
+        if (Settings::scope('core')->get('default_priority_id')) {
+            $defaultPriorityId = Settings::scope('core')->get('default_priority_id');
         } elseif (($priority = Priority::query()->first()) !== null) {
             $defaultPriorityId = $priority->id;
         } else {
