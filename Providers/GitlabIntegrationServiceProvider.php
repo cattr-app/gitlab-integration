@@ -2,14 +2,11 @@
 
 namespace Modules\GitlabIntegration\Providers;
 
-use Settings;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Filter;
 use Modules\GitlabIntegration\Console\SynchronizeTime;
 use Modules\GitlabIntegration\Console\Syncronize;
-use Modules\GitlabIntegration\Entities\SettingEntity;
 use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
-use Modules\GitlabIntegration\Services\SettingsService;
 
 class GitlabIntegrationServiceProvider extends ServiceProvider
 {
@@ -27,7 +24,7 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
      * @var array
      */
     protected $listen = [
-        'answer.success.item.list.result.task' => [
+        'response.success.tasks.list' => [
             'Modules\GitlabIntegration\Listeners\IntegrationObserver@taskList',
         ],
         'item.edit.task' => [
@@ -52,7 +49,7 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
         $this->registerCommands();
         $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
 
-        Filter::listen('answer.success.item.create.timeinterval', static function ($data) {
+        Filter::listen('response.success.intervals.create', static function ($data) {
             $timeInterval = $data['interval'];
             $helper = app()->make(TimeIntervalsHelper::class);
             $helper->createUnsyncedInterval($timeInterval);
