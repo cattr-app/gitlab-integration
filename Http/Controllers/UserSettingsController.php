@@ -14,17 +14,11 @@ use Throwable;
 
 class UserSettingsController extends Controller
 {
-    protected Client $client;
-    protected SettingsService $settings;
-    protected UserProperties $userProperties;
-
-    public function __construct(UserProperties $userProperties, Client $client, SettingsService $settings)
-    {
-        parent::__construct();
-
-        $this->client = $client;
-        $this->userProperties = $userProperties;
-        $this->settings = $settings;
+    public function __construct(
+        protected UserProperties $userProperties,
+        protected Client $client,
+        protected SettingsService $settings,
+    ) {
     }
 
     public static function getControllerRules(): array

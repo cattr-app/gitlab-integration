@@ -9,20 +9,8 @@ use Modules\GitlabIntegration\Services\SettingsService;
 
 class SettingsController extends Controller
 {
-    /**
-     * @var SettingsService
-     */
-    protected SettingsService $settings;
-
-    /**
-     * SettingsController constructor.
-     * @param $settings
-     */
-    public function __construct(SettingsService $settings)
+    public function __construct(protected SettingsService $settings)
     {
-        parent::__construct();
-
-        $this->settings = $settings;
     }
 
     /**
