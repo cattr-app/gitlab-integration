@@ -2,7 +2,7 @@
 
 use Illuminate\Routing\Router;
 
-Route::middleware('auth:api')->group(static function (Router $router) {
+Route::middleware('auth:sanctum')->group(static function (Router $router) {
     $router->get('/settings', 'SettingsController@index')->name('settings.index');
     $router->patch('/settings', 'SettingsController@update')->name('settings.update');
 
