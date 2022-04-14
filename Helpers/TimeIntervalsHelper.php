@@ -14,17 +14,17 @@ class TimeIntervalsHelper
     public const GTR_TABLE = 'gitlab_tasks_relations';
     public const GPR_TABLE = 'gitlab_projects_relations';
 
-    public function createUnsyncedInterval(TimeInterval $interval): bool
+    public function createUnsyncedInterval(array $interval): array
     {
-        $task = $this->getTasksById($interval->task_id);
-        if ($task && $task->task_id) {
-            return DB::table(self::GIS_TABLE)->insert([
-                'task_id' => $interval->task_id,
-                'time_interval_id' => $interval->id,
+        if (optional($this->getTasksById($interval['task_id']))->task_id) {
+            DB::table(self::GIS_TABLE)->insert([
+                'task_id' => $interval['task_id'],
+                'time_interval_id' => $interval['id'],
                 'is_synced' => 0
             ]);
         }
-        return false;
+
+        return $interval;
     }
 
     public function getTasksById(int $taskId)

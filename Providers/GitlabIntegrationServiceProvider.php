@@ -49,12 +49,10 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
         $this->registerCommands();
         $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
 
-        Filter::listen('response.success.intervals.create', static function ($data) {
-            $timeInterval = $data['interval'];
-            $helper = app()->make(TimeIntervalsHelper::class);
-            $helper->createUnsyncedInterval($timeInterval);
-            return $data;
-        });
+        Filter::listen(
+            'response.success.intervals.create',
+            static fn(array $data) => app()->make(TimeIntervalsHelper::class)->createUnsyncedInterval($data)
+        );
 
         parent::boot();
     }
