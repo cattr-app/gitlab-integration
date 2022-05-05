@@ -4,6 +4,26 @@ namespace Modules\GitlabIntegration\Entities;
 
 use App\Models\Setting;
 
+/**
+ * Modules\GitlabIntegration\Entities\SettingEntity
+ *
+ * @property int $id
+ * @property string $module_name
+ * @property string $key
+ * @property string $value
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity query()
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereKey($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereModuleName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereValue($value)
+ * @mixin \Eloquent
+ */
 class SettingEntity extends Setting
 {
     protected const TIME_SYNC_PERIOD_VALUES = [

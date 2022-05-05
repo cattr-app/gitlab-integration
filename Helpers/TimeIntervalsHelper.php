@@ -14,9 +14,9 @@ class TimeIntervalsHelper
     public const GTR_TABLE = 'gitlab_tasks_relations';
     public const GPR_TABLE = 'gitlab_projects_relations';
 
-    public function createUnsyncedInterval(array $interval): array
+    public static function createUnsyncedInterval(array $interval): array
     {
-        if (optional($this->getTasksById($interval['task_id']))->task_id) {
+        if (optional(self::getTasksById($interval['task_id']))->task_id) {
             DB::table(self::GIS_TABLE)->insert([
                 'task_id' => $interval['task_id'],
                 'time_interval_id' => $interval['id'],
@@ -27,28 +27,28 @@ class TimeIntervalsHelper
         return $interval;
     }
 
-    public function getTasksById(int $taskId)
+    public static function getTasksById(int $taskId)
     {
         return DB::table(self::GTR_TABLE)
             ->where('task_id', '=', $taskId)
             ->first();
     }
 
-    public function markAsSyncedIntervalByTaskId(int $taskId): int
+    public static function markAsSyncedIntervalByTaskId(int $taskId): int
     {
         return DB::table(self::GIS_TABLE)->where('task_id', '=', $taskId)->update([
             'is_synced' => 1
         ]);
     }
 
-    public function clearSyncedIntervals(): int
+    public static function clearSyncedIntervals(): int
     {
         return DB::table(self::GIS_TABLE)
             ->where('is_synced', '=', true)
             ->delete();
     }
 
-    public function getNotSyncedCollection(): Collection
+    public static function getNotSyncedCollection(): Collection
     {
         return DB::table(self::GIS_TABLE)
             ->where('is_synced', '=', false)
@@ -56,7 +56,7 @@ class TimeIntervalsHelper
             ->get();
     }
 
-    public function getGitlabIssueProjectRelation(Collection $tasks): array
+    public static function getGitlabIssueProjectRelation(Collection $tasks): array
     {
         $result = [];
 
@@ -65,8 +65,8 @@ class TimeIntervalsHelper
                 continue;
             }
 
-            $projectRelation = $this->getProjectRelation($task->project_id);
-            $taskRelation = $this->getTasksById($task->id);
+            $projectRelation = self::getProjectRelation($task->project_id);
+            $taskRelation = self::getTasksById($task->id);
 
             if (!$projectRelation) {
                 Log::info("Can`t relation from project id: {$task->project_id} \n");
@@ -87,7 +87,7 @@ class TimeIntervalsHelper
         return $result;
     }
 
-    public function getProjectRelation(int $projectId)
+    public static function getProjectRelation(int $projectId)
     {
         return DB::table(self::GPR_TABLE)
             ->where('project_id', '=', $projectId)

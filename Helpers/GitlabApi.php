@@ -2,10 +2,10 @@
 
 namespace Modules\GitlabIntegration\Helpers;
 
-use App\Models\Property;
 use App\Models\User;
 use Gitlab\Client;
 use Gitlab\ResultPager;
+use Http\Client\Exception;
 use Illuminate\Support\Facades\Log;
 use Modules\GitlabIntegration\Services\SettingsService;
 use Throwable;
@@ -13,22 +13,18 @@ use Throwable;
 class GitlabApi
 {
     protected User $user;
-    protected UserProperties $userProperties;
     protected string $apiUrl;
     protected string $apiKey;
     protected Client $client;
     protected ResultPager $pager;
-    protected SettingsService $settings;
 
-    public function __construct(UserProperties $userProperties, SettingsService $settings)
+    public function __construct(protected UserProperties $userProperties, protected SettingsService $settings)
     {
-        $this->userProperties = $userProperties;
-        $this->settings = $settings;
     }
 
     public static function buildFromUser(User $user): ?GitlabApi
     {
-        return app()->make(self::class)->init($user);
+        return app(self::class)->init($user);
     }
 
     protected function init(User $user): ?GitlabApi
@@ -61,12 +57,12 @@ class GitlabApi
         return $this;
     }
 
-    public function getUserProjects()
+    public function getUserProjects(): array
     {
         return $this->pager->fetchAll($this->client->api('projects'), 'all');
     }
 
-    public function getUserTasks()
+    public function getUserTasks(): array
     {
         return $this->pager->fetchAll($this->client->api('issues'), 'all', [null, [
             'scope' => 'assigned-to-me',
@@ -76,8 +72,9 @@ class GitlabApi
 
     /**
      * @param int[] $iids
+     * @throws Exception
      */
-    public function getClosedUserTasks(array $iids = [])
+    public function getClosedUserTasks(array $iids = []): array
     {
         $params = [
             'scope' => 'assigned-to-me',
@@ -101,7 +98,7 @@ class GitlabApi
         }
     }
 
-    public function getUserTime($projectId, $issue_iid)
+    public function getUserTime($projectId, $issue_iid): int
     {
         return (int)$this->client->issues->getTimeStats($projectId, $issue_iid)['total_time_spent'];
     }

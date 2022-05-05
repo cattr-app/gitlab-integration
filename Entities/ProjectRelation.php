@@ -6,6 +6,19 @@ use App\Models\Project;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Modules\GitlabIntegration\Entities\ProjectRelation
+ *
+ * @property int $gitlab_id
+ * @property int $project_id
+ * @property-read Project $project
+ * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation query()
+ * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation whereGitlabId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation whereProjectId($value)
+ * @mixin \Eloquent
+ */
 class ProjectRelation extends Model
 {
     // Table that stores the data

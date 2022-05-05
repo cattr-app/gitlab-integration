@@ -2,11 +2,13 @@
 
 namespace Modules\GitlabIntegration\Providers;
 
-use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Filter;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
 use Modules\GitlabIntegration\Console\SynchronizeTime;
 use Modules\GitlabIntegration\Console\Syncronize;
-use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
+use Modules\GitlabIntegration\Subscribers\EventObserver;
+use Modules\GitlabIntegration\Subscribers\FilterObserver;
 
 class GitlabIntegrationServiceProvider extends ServiceProvider
 {
@@ -15,79 +17,22 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
      */
     protected string $moduleName = 'GitlabIntegration';
 
-    /**
-     * @var string $moduleNameLower
-     */
-    protected string $moduleNameLower = 'gitlabintegration';
-
-    /**
-     * @var array
-     */
-    protected $listen = [
-        'response.success.tasks.list' => [
-            'Modules\GitlabIntegration\Listeners\IntegrationObserver@taskList',
-        ],
-        'item.edit.task' => [
-            'Modules\GitlabIntegration\Listeners\IntegrationObserver@taskEdition',
-        ],
-        'item.remove.task' => [
-            'Modules\GitlabIntegration\Listeners\IntegrationObserver@taskDeletion',
-        ],
-        'item.edit.timeinterval' => [
-            'Modules\GitlabIntegration\Listeners\IntegrationObserver@timeintervalEdition',
-        ],
-    ];
-
-    /**
-     * Boot the application events.
-     *
-     * @return void
-     */
     public function boot(): void
     {
-        $this->registerTranslations();
-        $this->registerCommands();
         $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
 
-        Filter::listen(
-            'response.success.intervals.create',
-            static fn(array $data) => app()->make(TimeIntervalsHelper::class)->createUnsyncedInterval($data)
-        );
-
-        parent::boot();
-    }
-
-    /**
-     * Register translations.
-     */
-    public function registerTranslations(): void
-    {
-        $langPath = resource_path('lang/modules/' . $this->moduleNameLower);
-
-        if (is_dir($langPath)) {
-            $this->loadTranslationsFrom($langPath, $this->moduleNameLower);
-        } else {
-            $this->loadTranslationsFrom(module_path($this->moduleName, 'Resources/lang'), $this->moduleNameLower);
-        }
-    }
-
-    /**
-     * Register command
-     */
-    protected function registerCommands(): void
-    {
         $this->commands([
             Syncronize::class,
             SynchronizeTime::class,
         ]);
     }
 
-    /**
-     * Register the service provider.
-     */
     public function register(): void
     {
         $this->app->register(ScheduleServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
+
+        $this->booting(static fn() => Event::subscribe(EventObserver::class));
+        $this->booting(static fn() => Filter::subscribe(FilterObserver::class));
     }
 }
