@@ -21,35 +21,21 @@ use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
 
 class EventObserver
 {
-    /**
-     * Observe task edition
-     *
-     * @param $task
-     *
-     * @return void
-     */
-    public function taskEdition($task): void
+    public function taskEdition(array $data): void
     {
         abort_if(
             DB::table('gitlab_tasks_relations')
-                ->where('task_id', $task->id)->count(),
+                ->where('task_id', $data[0]->id)->exists(),
             403,
             'Access denied to edit a task from GitLab integration'
         );
     }
 
-    /**
-     * Observe task deletion
-     *
-     * @param $task
-     *
-     * @return void
-     */
-    public function taskDeletion($task): void
+    public function taskDeletion(mixed $taskId): void
     {
         abort_if(
             DB::table('gitlab_tasks_relations')
-                ->where('task_id', $task->id)->count(),
+                ->where('task_id', $taskId)->exists(),
             403,
             'Access denied to delete a task from GitLab integration'
         );
