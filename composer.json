@@ -2,7 +2,7 @@
   "type": "laravel-module",
   "name": "cattr/gitlab_integration-module",
   "description": "Gitlab Integration for Cattr",
-  "license": "GNU GPLv3",
+  "license": "SEE LICENSE IN LICENSE",
   "authors": [
     {
       "name": "AmazingCat",
