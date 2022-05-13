@@ -77,12 +77,13 @@ class UserSettingsController extends Controller
         }
 
         try {
-            $client = Client::create($this->settings->getApiUrl())
-                ->authenticate($request->input('api_key'), Client::AUTH_URL_TOKEN);
+            $client = new Client();
+            $client->setUrl($this->settings->getApiUrl());
+            $client->authenticate($request->input('api_key'), Client::AUTH_HTTP_TOKEN);
 
             $fetcher = new ResultPager($client);
-            $fetcher->fetch($client->api('users'), 'me');
-        } catch (Throwable $throwable) {
+            $fetcher->fetch($client->users(), 'me');
+        } catch (Throwable) {
             throw ValidationException::withMessages([
                 'api_key' => __('Invalid API key.'),
             ]);

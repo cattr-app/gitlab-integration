@@ -39,9 +39,11 @@ class GitlabApi
         }
 
         try {
-            $this->client = Client::create($this->apiUrl)->authenticate($this->apiKey, Client::AUTH_URL_TOKEN);
+            $this->client = new Client();
+            $this->client->setUrl($this->apiUrl);
+            $this->client->authenticate($this->apiKey, Client::AUTH_HTTP_TOKEN);
             $this->pager = new ResultPager($this->client);
-            $this->pager->fetch($this->client->api('users'), 'me');
+            $this->pager->fetch($this->client->users(), 'me');
         } catch (Throwable $throwable) {
             if ($throwable->getMessage() === 'invalid_token' || strpos($throwable->getMessage(), 'Token is expired') !== false) {
                 $this->userProperties->removeApiKey($user->id);
@@ -59,12 +61,12 @@ class GitlabApi
 
     public function getUserProjects(): array
     {
-        return $this->pager->fetchAll($this->client->api('projects'), 'all');
+        return $this->pager->fetchAll($this->client->projects(), 'all');
     }
 
     public function getUserTasks(): array
     {
-        return $this->pager->fetchAll($this->client->api('issues'), 'all', [null, [
+        return $this->pager->fetchAll($this->client->issues(), 'all', [null, [
             'scope' => 'assigned-to-me',
             'state' => 'opened',
         ]]);
@@ -85,13 +87,13 @@ class GitlabApi
             $params['iids'] = $iids;
         }
 
-        return $this->pager->fetchAll($this->client->api('issues'), 'all', [null, $params]);
+        return $this->pager->fetchAll($this->client->issues(), 'all', [null, $params]);
     }
 
     public function sendUserTime($projectId, $issue_iid, $duration)
     {
         try {
-            return $this->client->issues->addSpentTime($projectId, $issue_iid, $duration);
+            return $this->client->issues()->addSpentTime($projectId, $issue_iid, $duration);
         } catch (Throwable $throwable) {
             Log::error($throwable->getMessage());
             return null;
@@ -100,11 +102,11 @@ class GitlabApi
 
     public function getUserTime($projectId, $issue_iid): int
     {
-        return (int)$this->client->issues->getTimeStats($projectId, $issue_iid)['total_time_spent'];
+        return (int)$this->client->issues()->getTimeStats($projectId, $issue_iid)['total_time_spent'];
     }
 
     public function resetUserTime($projectId, $issue_iid)
     {
-        return $this->client->issues->resetSpentTime($projectId, $issue_iid);
+        return $this->client->issues()->resetSpentTime($projectId, $issue_iid);
     }
 }
