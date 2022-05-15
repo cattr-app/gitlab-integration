@@ -2,69 +2,32 @@
 
 namespace Modules\GitlabIntegration\Helpers;
 
-use App\Models\Property;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 
 class UserProperties
 {
-    public const URL = 'GITLAB_URL';
-
     public const API_KEY = 'GITLAB_APIKEY';
 
-    public function getUrl(int $userId, string $default = ''): string
+    public static function getApiKey(User $user): ?string
     {
-        return $this->get($userId, static::URL, $default);
+        return optional($user->properties()->firstWhere('name', '=', self::API_KEY))->value;
     }
 
-    public function get(int $userId, string $propertyName, $default = '')
+    public static function setApiKey(User $user, string $key): Model
     {
-        $property = Property::where('entity_id', '=', $userId)
-            ->where('entity_type', '=', Property::USER_CODE)
-            ->where('name', '=', $propertyName)->first(['value']);
-
-        return $property ? $property->value : $default;
+        return $user->properties()->updateOrCreate(['name' => self::API_KEY], ['value' => $key]);
     }
 
-    public function getApiKey(int $userId, string $default = ''): string
+    public static function removeApiKey(User $user): void
     {
-        return $this->get($userId, static::API_KEY, '');
-    }
-
-    public function setUrl(int $userId, string $url): Property
-    {
-        return $this->set($userId, static::URL, $url);
-    }
-
-    protected function set($userId, string $propertyName, $value = ''): Property
-    {
-        $params = [
-            'entity_id' => $userId,
-            'entity_type' => Property::USER_CODE,
-            'name' => $propertyName,
-        ];
-
-        /** @var Property $property */
-        $property = Property::query()->where($params)->first();
-
-        if (!$property) {
-            $params['value'] = $value;
-            $property = Property::query()->create($params);
-        } else {
-            $property->value = $value;
-            $property->save();
-        }
-
-        return $property;
-    }
-
-    public function setApiKey(int $userId, string $apikey): Property
-    {
-        return $this->set($userId, static::API_KEY, $apikey);
-    }
-
-    public function removeApiKey(int $userId)
-    {
-        return Property::where('entity_id', '=', $userId)
-            ->where('name', '=', self::API_KEY)
+        optional($user->properties()->firstWhere('name', '=', self::API_KEY))
             ->forceDelete();
+    }
+
+    public static function getUsersWithApiKeys(): Collection
+    {
+        return User::active()->whereRelation('properties', 'name', self::API_KEY)->newCollection();
     }
 }

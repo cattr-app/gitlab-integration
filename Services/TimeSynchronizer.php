@@ -19,14 +19,8 @@ class TimeSynchronizer
      */
     protected $api;
 
-    /**
-     * @var TimeIntervalsHelper
-     */
-    protected $timeIntervalsHelper;
-
-    public function __construct(TimeIntervalsHelper $timeIntervalHelper)
+    public function __construct(protected TimeIntervalsHelper $timeIntervalHelper)
     {
-        $this->timeIntervalsHelper = $timeIntervalHelper;
     }
 
     public function synchronize(): bool

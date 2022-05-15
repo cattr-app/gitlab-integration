@@ -23,25 +23,10 @@ class SynchronizeTime extends Command
     protected $description = 'Synchronize time for Gitlab Tasks for all users, who activate the Gitlab integration.';
 
     /**
-     * @var TimeSynchronizer
-     */
-    protected $timeSynchronizer;
-
-    /**
-     * Create a new command instance.
-     */
-    public function __construct(TimeSynchronizer $timeSynchronizer)
-    {
-        parent::__construct();
-
-        $this->timeSynchronizer = $timeSynchronizer;
-    }
-
-    /**
      * Execute the console command.
      */
-    public function handle(): void
+    public function handle(TimeSynchronizer $timeSynchronizer): void
     {
-        $this->timeSynchronizer->synchronize();
+        $timeSynchronizer->synchronize();
     }
 }

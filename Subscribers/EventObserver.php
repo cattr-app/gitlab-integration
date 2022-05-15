@@ -3,29 +3,17 @@
 namespace Modules\GitlabIntegration\Subscribers;
 
 use App\Models\TimeInterval;
-use App\Models\User;
-use Filter;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Events\Dispatcher;
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Pagination\Paginator;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Modules\GitlabIntegration\Entities\ProjectRelation;
-use Modules\GitlabIntegration\Entities\TaskRelation;
-use Modules\GitlabIntegration\Helpers\GitlabApi;
 use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
 use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
 
 class EventObserver
 {
-    public function taskEdition(array $data): void
+    public function taskEdition(TimeInterval $data): void
     {
         abort_if(
             DB::table('gitlab_tasks_relations')
-                ->where('task_id', $data[0]->id)->exists(),
+                ->where('task_id', $data->id)->exists(),
             403,
             'Access denied to edit a task from GitLab integration'
         );
@@ -41,7 +29,7 @@ class EventObserver
         );
     }
 
-    public function intervalCreation(array $data): void
+    public function intervalCreation(TimeInterval $data): void
     {
         dispatch(static fn() => TimeIntervalsHelper::createUnsyncedInterval($data));
     }

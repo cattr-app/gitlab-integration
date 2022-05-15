@@ -6,7 +6,7 @@ use Filter;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Modules\GitlabIntegration\Console\SynchronizeTime;
-use Modules\GitlabIntegration\Console\Syncronize;
+use Modules\GitlabIntegration\Console\Synchronize;
 use Modules\GitlabIntegration\Subscribers\EventObserver;
 use Modules\GitlabIntegration\Subscribers\FilterObserver;
 
@@ -22,7 +22,7 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
 
         $this->commands([
-            Syncronize::class,
+            Synchronize::class,
             SynchronizeTime::class,
         ]);
     }

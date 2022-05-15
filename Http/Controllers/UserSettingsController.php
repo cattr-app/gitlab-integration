@@ -15,8 +15,6 @@ use Throwable;
 class UserSettingsController extends Controller
 {
     public function __construct(
-        protected UserProperties $userProperties,
-        protected Client $client,
         protected SettingsService $settings,
     ) {
     }
@@ -29,22 +27,17 @@ class UserSettingsController extends Controller
         ];
     }
 
-    public function index(Request $request): array
+    public function index(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        $apiKey = $this->userProperties->getApiKey($userId);
-        $hiddenKey = (bool)$apiKey
-            ? preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $apiKey)
+        $apiKey = UserProperties::getApiKey($request->user());
+        $hiddenKey = $apiKey
+            ? preg_replace('/^(.{4}).*(.{4})$/', '$1 ********* $2', $apiKey)
             : $apiKey;
 
-        $integrationEnabled = $this->settings->isEnabled();
-
-        return [
-            'data' => [
+        return responder()->success([
                 'api_key' => $hiddenKey,
-                'enabled' => $integrationEnabled,
-            ]
-        ];
+                'enabled' => $this->settings->isEnabled(),
+        ])->respond();
     }
 
     public function update(Request $request): JsonResponse
@@ -53,27 +46,20 @@ class UserSettingsController extends Controller
             'api_key' => 'string|nullable'
         ]);
 
-        $userId = $request->user()->id;
-        $apiKey = $this->userProperties->getApiKey($userId) ?? null;
-        if (empty(trim($request->input('api_key')))) {
-            if ($apiKey) {
-                $this->userProperties->removeApiKey($userId);
-                return new JsonResponse([
-                    'data' => [
-                        'enabled' => $this->settings->isEnabled(),
-                        'api_key' => '',
-                    ],
-                ]);
-            }
+        $apiKey = UserProperties::getApiKey($request->user());
+        if ($apiKey && empty(trim($request->input('api_key')))) {
+            UserProperties::removeApiKey($request->user());
+            return responder()->success([
+                    'enabled' => $this->settings->isEnabled(),
+                    'api_key' => '',
+            ])->respond();
         }
 
         if (strpos(request('api_key'), '*')) {
-            return new JsonResponse([
-                'data' => [
-                    'enabled' => $this->settings->isEnabled(),
-                    'api_key' => preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $apiKey),
-                ],
-            ]);
+            return responder()->success([
+                'enabled' => $this->settings->isEnabled(),
+                'api_key' => preg_replace('/^(.{4}).*(.{4})$/', '$1 ********* $2', $apiKey),
+            ])->respond();
         }
 
         try {
@@ -89,13 +75,11 @@ class UserSettingsController extends Controller
             ]);
         }
 
-        $token = $this->userProperties->setApiKey(auth()->user()->id, request('api_key'));
+        UserProperties::setApiKey($request->user(), request('api_key'));
 
-        return new JsonResponse([
-            'data' => [
-                'enabled' => $this->settings->isEnabled(),
-                'api_key' => preg_replace('/^(.{4}).*(.{4})$/i', '$1 ********* $2', $token['value']),
-            ],
-        ]);
+        return responder()->success([
+            'enabled' => $this->settings->isEnabled(),
+            'api_key' => preg_replace('/^(.{4}).*(.{4})$/', '$1 ********* $2', request('api_key')),
+        ])->respond();
     }
 }

@@ -3,6 +3,9 @@
 namespace Modules\GitlabIntegration\Entities;
 
 use App\Models\Project;
+use App\Scopes\ProjectAccessScope;
+use Eloquent;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,12 +15,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $gitlab_id
  * @property int $project_id
  * @property-read Project $project
- * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation query()
- * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation whereGitlabId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ProjectRelation whereProjectId($value)
- * @mixin \Eloquent
+ * @method static Builder|ProjectRelation newModelQuery()
+ * @method static Builder|ProjectRelation newQuery()
+ * @method static Builder|ProjectRelation query()
+ * @method static Builder|ProjectRelation whereGitlabId($value)
+ * @method static Builder|ProjectRelation whereProjectId($value)
+ * @mixin Eloquent
  */
 class ProjectRelation extends Model
 {
@@ -37,6 +40,7 @@ class ProjectRelation extends Model
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class, 'project_id', 'id');
+        return $this->belongsTo(Project::class, 'project_id', 'id')
+            ->withoutGlobalScope(ProjectAccessScope::class);
     }
 }
