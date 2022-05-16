@@ -28,6 +28,6 @@ class UserProperties
 
     public static function getUsersWithApiKeys(): Collection
     {
-        return User::active()->whereRelation('properties', 'name', self::API_KEY)->newCollection();
+        return User::active()->whereRelation('properties', 'name', self::API_KEY)->get();
     }
 }

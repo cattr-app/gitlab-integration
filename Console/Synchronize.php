@@ -13,7 +13,7 @@ use Modules\GitlabIntegration\Entities\ProjectRelation;
 use Modules\GitlabIntegration\Entities\TaskRelation;
 use Modules\GitlabIntegration\Helpers\GitlabApi;
 use Modules\GitlabIntegration\Helpers\UserProperties;
-use Phalcon\Helper\Arr;
+use Illuminate\Support\Arr;
 use Settings;
 use Throwable;
 
@@ -56,8 +56,6 @@ class Synchronize extends Command
         $this->withProgressBar(
             UserProperties::getUsersWithApiKeys()->lazy(),
             static function (User $user) use ($self) {
-                $self->info("Syncing user $user->full_name");
-
                 Log::withContext([
                     'user' => [
                         'id' => $user->id,
@@ -69,7 +67,7 @@ class Synchronize extends Command
 
                 if (!$api) {
                     Log::error('Can`t instantiate an API for user');
-                    $self->error('Can`t instantiate an API for user');
+                    $self->error(' Can`t instantiate an API for user');
                     UserProperties::removeApiKey($user);
                     return;
                 }
@@ -78,7 +76,6 @@ class Synchronize extends Command
                     $gitlabProjects = $api->getUserProjects();
                 } catch (Throwable $throwable) {
                     Log::error('Projects cant be fetched for user', $throwable);
-                    $self->error('Projects cant be fetched for user');
                     return;
                 }
 
@@ -88,13 +85,14 @@ class Synchronize extends Command
                     $gitlabTasks = $api->getUserTasks();
                 } catch (Throwable $throwable) {
                     Log::error('Tasks cant be fetched for user', $throwable);
-                    $self->error('Tasks cant be fetched for user');
                     return;
                 }
 
                 $self->checkClosedTasks($api, $user->id);
                 $self->syncTasks($gitlabTasks, $user->id);
             });
+
+        $this->newLine();
     }
 
     private function syncProjects(array $gitlabProjects): void
@@ -153,7 +151,7 @@ class Synchronize extends Command
             $projectID = ProjectRelation::where('gitlab_id', $gitlabTask['project_id'])->first()->project_id;
             if (!$projectID) {
                 Log::error("Project ID for gilab issue wasn`t found! {$gitlabTask['name'] }");
-                $this->error("Project ID for gilab issue wasn`t found! {$gitlabTask['name'] } \n");
+                $this->error("Project ID for gilab issue wasn`t found! {$gitlabTask['name'] }");
                 continue;
             }
 
