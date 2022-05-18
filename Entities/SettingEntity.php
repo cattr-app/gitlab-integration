@@ -3,6 +3,7 @@
 namespace Modules\GitlabIntegration\Entities;
 
 use App\Models\Setting;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Modules\GitlabIntegration\Entities\SettingEntity
@@ -13,15 +14,15 @@ use App\Models\Setting;
  * @property string $value
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity query()
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereKey($value)
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereModuleName($value)
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|SettingEntity whereValue($value)
+ * @method static Builder|SettingEntity newModelQuery()
+ * @method static Builder|SettingEntity newQuery()
+ * @method static Builder|SettingEntity query()
+ * @method static Builder|SettingEntity whereCreatedAt($value)
+ * @method static Builder|SettingEntity whereId($value)
+ * @method static Builder|SettingEntity whereKey($value)
+ * @method static Builder|SettingEntity whereModuleName($value)
+ * @method static Builder|SettingEntity whereUpdatedAt($value)
+ * @method static Builder|SettingEntity whereValue($value)
  * @mixin \Eloquent
  */
 class SettingEntity extends Setting

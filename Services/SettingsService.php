@@ -30,6 +30,6 @@ class SettingsService extends SettingsProviderService
      */
     public function getTimeSyncPeriod(): int
     {
-        return $this->get('time_sync_period');
+        return $this->get('time_sync_period', 0);
     }
 }
