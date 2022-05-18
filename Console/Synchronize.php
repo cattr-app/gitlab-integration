@@ -106,9 +106,11 @@ class Synchronize extends Command
                 self::SOURCE => 'gitlab',
             ];
 
-            $relation = ProjectRelation::firstOrCreate(
-                ['gitlab_id' => $gitlabProject['id']],
-                ['project_id' => Project::create($projectMapping)->id]
+            $relation = ProjectRelation::whereGitlabId($gitlabProject['id'])->firstOr(
+                callback: static fn() => ProjectRelation::create([
+                    'gitlab_id' => $gitlabProject['id'],
+                    'project_id' => Project::create($projectMapping)->id,
+                ]),
             );
 
             Project::whereId($relation->project_id)
@@ -167,12 +169,12 @@ class Synchronize extends Command
                 self::USER_ID => $userID,
             ];
 
-            $taskRelation = TaskRelation::firstOrCreate(
-                ['gitlab_id' => $gitlabTask['id']],
-                [
+            $taskRelation = TaskRelation::whereGitlabId($gitlabTask['id'])->firstOr(
+                callback: static fn() => TaskRelation::create([
+                    'gitlab_id' => $gitlabTask['id'],
                     'task_id' => Task::create($taskMapping)->id,
                     'gitlab_issue_iid' => $gitlabTask['iid'],
-                ]
+                ]),
             );
 
             $task = Task::find($taskRelation->task_id);
