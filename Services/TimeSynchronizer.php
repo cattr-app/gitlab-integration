@@ -15,17 +15,13 @@ use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
 class TimeSynchronizer
 {
     /**
-     * @var GitlabApi
+     * @var GitlabApi|null
      */
-    protected $api;
-
-    public function __construct(protected TimeIntervalsHelper $timeIntervalHelper)
-    {
-    }
+    protected ?GitlabApi $api;
 
     public function synchronize(): bool
     {
-        $timeIntervals = $this->timeIntervalsHelper->getNotSyncedCollection();
+        $timeIntervals = TimeIntervalsHelper::getNotSyncedCollection();
 
         /** @var User $user */
         foreach (User::all() as $user) {
@@ -41,7 +37,7 @@ class TimeSynchronizer
             $groupedIntervals = $userIntervals->groupBy('task_id');
 
             $durations = $this->calculateDuration($groupedIntervals);
-            $issueProjectRelations = $this->timeIntervalsHelper->getGitlabIssueProjectRelation(
+            $issueProjectRelations = TimeIntervalsHelper::getGitlabIssueProjectRelation(
                 Task::whereIn(
                     'id',
                     $groupedIntervals->keys()
@@ -52,24 +48,22 @@ class TimeSynchronizer
                 $glProjectId = $relation['gl_project_id'];
                 $glIssueIid = $relation['gl_issue_iid'];
                 $response = $this->api->sendUserTime($glProjectId, $glIssueIid, $durations[$taskId]['humanDuration']);
-                if($response !== null){
-                echo 'Sending issue_iid '
-                    . $glIssueIid
-                    . ' duration '
-                    . $durations[$taskId]['humanDuration']
-                    . ' for user '
-                    . $user->full_name
-                    . "\n";
+                if ($response !== null) {
+                    echo 'Sending issue_iid '
+                        . $glIssueIid
+                        . ' duration '
+                        . $durations[$taskId]['humanDuration']
+                        . ' for user '
+                        . $user->full_name
+                        . "\n";
 
-                if ($response && isset($response['total_time_spent'])) {
-                    $this->timeIntervalsHelper->markAsSyncedIntervalByTaskId($taskId);
-                }
-                } else {
-                    continue;
+                    if ($response && isset($response['total_time_spent'])) {
+                        TimeIntervalsHelper::markAsSyncedIntervalByTaskId($taskId);
+                    }
                 }
             }
 
-            $this->timeIntervalsHelper->clearSyncedIntervals();
+            TimeIntervalsHelper::clearSyncedIntervals();
         }
 
         return true;
