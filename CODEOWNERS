@@ -1,4 +1,4 @@
-* @cattr/core/modules/gitlab/backend @cattr/code @cattr
+* @cattr/core/modules/gitlab/backend @cattr/core @cattr
 
 Jobs/ReassignTaskToEditedInterval.php @alex_vyarvelsky
 
