@@ -4,7 +4,7 @@
   "description": "Gitlab Integration for Cattr",
   "keywords": [],
   "active": 1,
-  "order": 10,
+  "priority": 10,
   "providers": [
     "Modules\\GitlabIntegration\\Providers\\ModuleServiceProvider",
     "Modules\\GitlabIntegration\\Providers\\RouteServiceProvider",
@@ -12,5 +12,6 @@
   ],
   "aliases": {},
   "files": [],
-  "requires": []
+  "requires": [],
+  "minimumCoreVersion": "4.0"
 }

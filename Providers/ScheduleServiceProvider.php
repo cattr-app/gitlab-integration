@@ -12,7 +12,9 @@ class ScheduleServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        $this->app->booted(static function (Schedule $schedule, SettingsService $settingsService) {
+        $this->app->booted(static function () {
+            $schedule = app(Schedule::class);
+            $settingsService = app(SettingsService::class);
             $schedule->command(Synchronize::class)->everyFiveMinutes()->withoutOverlapping();
 
             switch ($settingsService->getTimeSyncPeriod()) {
