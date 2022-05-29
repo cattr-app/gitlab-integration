@@ -1,0 +1,14 @@
+* @cattr/core/modules/gitlab/backend
+
+Jobs/ReassignTaskToEditedInterval.php @alex_vyarvelsky
+
+Subscribers/EventObserver.php @alex_vyarvelsky
+Subscribers/FilterObserver.php @alex_vyarvelsky
+
+[CI]
+.gitlab-ci.yml @alex_vyarvelsky
+
+[Misc]
+CODEOWNERS @cattr
+composer.json @cattr
+module.json @cattr
