@@ -1,14 +1,16 @@
 {
-    "name": "GitlabIntegration",
-    "alias": "gitlabintegration",
-    "description": "Gitlab Integration",
-    "keywords": [],
-    "active": 1,
-    "order": 0,
-    "providers": [
-        "Modules\\GitlabIntegration\\Providers\\GitlabIntegrationServiceProvider"
-    ],
-    "aliases": {},
-    "files": [],
-    "requires": []
+  "name": "CattrGitlabIntegration",
+  "alias": "cattr_gitlab_integration",
+  "description": "Gitlab Integration for Cattr",
+  "keywords": [],
+  "active": 1,
+  "order": 10,
+  "providers": [
+    "Modules\\GitlabIntegration\\Providers\\ModuleServiceProvider",
+    "Modules\\GitlabIntegration\\Providers\\RouteServiceProvider",
+    "Modules\\GitlabIntegration\\Providers\\ScheduleServiceProvider"
+  ],
+  "aliases": {},
+  "files": [],
+  "requires": []
 }

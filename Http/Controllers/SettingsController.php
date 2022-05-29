@@ -4,7 +4,7 @@ namespace Modules\GitlabIntegration\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Modules\GitlabIntegration\Http\Requests\Setting\UpdateSettingsRequest;
+use Modules\GitlabIntegration\Http\Requests\UpdateCompanySettingsRequest;
 use Modules\GitlabIntegration\Services\SettingsService;
 
 class SettingsController extends Controller
@@ -13,45 +13,15 @@ class SettingsController extends Controller
     {
     }
 
-    /**
-     * Returns controller rules.
-     *
-     * @return array
-     */
-    public static function getControllerRules(): array
-    {
-        return [
-            'index' => 'integration.gitlab-settings',
-            'update' => 'integration.gitlab-settings'
-        ];
-    }
-
-    /**
-     * Get all settings.
-     *
-     * @return JsonResponse
-     */
     public function index(): JsonResponse
     {
-        $settings = $this->settings->all();
-
-        return new JsonResponse([
-            'data' => $settings
-        ]);
+        return responder()->success($this->settings->all())->respond();
     }
 
-    /**
-     * Update the settings.
-     *
-     * @param UpdateSettingsRequest $request
-     * @return JsonResponse
-     */
-    public function update(UpdateSettingsRequest $request): JsonResponse
+    public function update(UpdateCompanySettingsRequest $request): JsonResponse
     {
-        $settings = $this->settings->set($request->validated());
+        $this->settings->set($request->validated());
 
-        return new JsonResponse([
-            'data' => $settings
-        ]);
+        return responder()->success()->respond(204);
     }
 }

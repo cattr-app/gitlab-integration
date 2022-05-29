@@ -4,48 +4,32 @@ namespace Modules\GitlabIntegration\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
-use Modules\GitlabIntegration\Entities\SettingEntity;
+use Modules\GitlabIntegration\Console\Synchronize;
+use Modules\GitlabIntegration\Console\SynchronizeTime;
 use Modules\GitlabIntegration\Services\SettingsService;
 
 class ScheduleServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        $this->app->booted(function () {
-            $schedule = app(Schedule::class);
-            $schedule->command('gitlab:sync')->everyFiveMinutes()->withoutOverlapping();
+        $this->app->booted(static function (Schedule $schedule, SettingsService $settingsService) {
+            $schedule->command(Synchronize::class)->everyFiveMinutes()->withoutOverlapping();
 
-            // Synchronize time every 5 minutes
-            $schedule->command('gitlab:sync-time')->everyFiveMinutes()->when(
-                function (SettingsService $settingsService, SettingEntity $settingsEntity) {
-                    $periodValue = $settingsEntity->getTimeSyncPeriodValueByKey('FIVE_MINUTES');
-                    return $settingsService->getTimeSyncPeriod() === $periodValue;
-                }
-            )->withoutOverLapping();
-
-            // Synchronize time every 30 minutes
-            $schedule->command('gitlab:sync-time')->everyThirtyMinutes()->when(
-                function (SettingsService $settingsService, SettingEntity $settingsEntity) {
-                    $periodValue = $settingsEntity->getTimeSyncPeriodValueByKey('THIRTY_MINUTES');
-                    return $settingsService->getTimeSyncPeriod() === $periodValue;
-                }
-            )->withoutOverLapping();
-
-            // Synchronize time every hour
-            $schedule->command('gitlab:sync-time')->hourly()->when(
-                function (SettingsService $settingsService, SettingEntity $settingsEntity) {
-                    $periodValue = $settingsEntity->getTimeSyncPeriodValueByKey('HOURLY');
-                    return $settingsService->getTimeSyncPeriod() === $periodValue;
-                }
-            )->withoutOverLapping();
-
-            // Synchronize time every day
-            $schedule->command('gitlab:sync-time')->daily()->when(
-                function (SettingsService $settingsService, SettingEntity $settingsEntity) {
-                    $periodValue = $settingsEntity->getTimeSyncPeriodValueByKey('DAILY');
-                    return $settingsService->getTimeSyncPeriod() === $periodValue;
-                }
-            )->withoutOverLapping();
+            switch ($settingsService->getTimeSyncPeriod()) {
+                case 5:
+                    $schedule->command(SynchronizeTime::class)->everyFiveMinutes()->withoutOverlapping();
+                    break;
+                case 30:
+                    $schedule->command(SynchronizeTime::class)->everyThirtyMinutes()->withoutOverlapping();
+                    break;
+                case 60:
+                    $schedule->command(SynchronizeTime::class)->hourly()->withoutOverlapping();
+                    break;
+                case 1440:
+                    $schedule->command(SynchronizeTime::class)->daily()->withoutOverlapping();
+                    break;
+                default:
+            }
         });
     }
 }

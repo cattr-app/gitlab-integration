@@ -1,32 +1,31 @@
 {
-  "type": "laravel-module",
   "name": "cattr/gitlab_integration-module",
   "description": "Gitlab Integration for Cattr",
-  "license": "SEE LICENSE IN LICENSE",
+  "type": "laravel-module",
+  "license": "SSPL-1.0",
   "authors": [
     {
-      "name": "AmazingCat",
-      "email": "to@amazingcat.net"
+      "name": "Alex V",
+      "email": "alex@cattr.app",
+      "role": "Maintainer"
     },
     {
-      "name": "Alex V",
-      "email": "alex@cattr.app"
+      "name": "Vitaliy Pavkin",
+      "email": "vitaly@amazingcat.net",
+      "role": "Maintainer"
+    },
+    {
+      "name": "Alexander Yanchuk",
+      "email": "alexander@amazingcat.net",
+      "role": "Developer"
     }
   ],
   "support": {
-    "email": "hi@cattr.app",
+    "email": "git+cattr-core-modules-gitlab-backend-273-issue-@amazingcat.net",
     "forum": "https://community.cattr.app/public/",
     "issues": "https://git.amazingcat.net/AmazingTime/core/modules/gitlab/backend/-/issues",
     "chat": "https://cattr.app",
     "source": "https://git.amazingcat.net/AmazingTime/core/modules/gitlab/backend"
-  },
-  "extra": {
-    "laravel": {
-      "providers": [
-        "Modules\\GitlabIntegration\\Providers\\GitlabIntegrationServiceProvider"
-      ],
-      "aliases": []
-    }
   },
   "autoload": {
     "psr-4": {

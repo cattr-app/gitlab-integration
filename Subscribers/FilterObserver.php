@@ -2,22 +2,8 @@
 
 namespace Modules\GitlabIntegration\Subscribers;
 
-use App\Models\TimeInterval;
-use App\Models\User;
-use Filter;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Events\Dispatcher;
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Pagination\Paginator;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Modules\GitlabIntegration\Entities\ProjectRelation;
-use Modules\GitlabIntegration\Entities\TaskRelation;
-use Modules\GitlabIntegration\Helpers\GitlabApi;
-use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
-use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
 
 class FilterObserver
 {

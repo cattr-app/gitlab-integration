@@ -43,7 +43,7 @@ class MigrateSettingsFromPropertiesTable extends Migration
             DB::table('properties')->insert([
                 'entity_id' => 0,
                 'entity_type' => 'company',
-                'name' => "gitlab_{$setting->key}",
+                'name' => "gitlab_$setting->key",
                 'value' => $setting->value,
             ]);
 

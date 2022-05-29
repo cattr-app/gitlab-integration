@@ -3,9 +3,6 @@ stages:
   - deploy
 
 sast:
-  variables:
-    SAST_EXCLUDED_ANALYZERS: bandit, brakeman, eslint, flawfinder, gosec, kubesec,
-      nodejs-scan, pmd-apex, security-code-scan, sobelow, spotbugs
   stage: test
 
 publish:

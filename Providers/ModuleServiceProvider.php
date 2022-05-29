@@ -5,12 +5,12 @@ namespace Modules\GitlabIntegration\Providers;
 use Filter;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
-use Modules\GitlabIntegration\Console\SynchronizeTime;
 use Modules\GitlabIntegration\Console\Synchronize;
+use Modules\GitlabIntegration\Console\SynchronizeTime;
 use Modules\GitlabIntegration\Subscribers\EventObserver;
 use Modules\GitlabIntegration\Subscribers\FilterObserver;
 
-class GitlabIntegrationServiceProvider extends ServiceProvider
+class ModuleServiceProvider extends ServiceProvider
 {
     /**
      * @var string $moduleName
@@ -29,9 +29,6 @@ class GitlabIntegrationServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->app->register(ScheduleServiceProvider::class);
-        $this->app->register(RouteServiceProvider::class);
-
         $this->booting(static fn() => Event::subscribe(EventObserver::class));
         $this->booting(static fn() => Filter::subscribe(FilterObserver::class));
     }

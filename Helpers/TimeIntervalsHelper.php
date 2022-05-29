@@ -69,12 +69,12 @@ class TimeIntervalsHelper
             $taskRelation = self::getTasksById($task->id);
 
             if (!$projectRelation) {
-                Log::info("Can`t relation from project id: {$task->project_id} \n");
+                Log::info("Can`t relation from project id: $task->project_id \n");
                 continue;
             }
 
             if (!$taskRelation) {
-                Log::info("Can`t relation from task id: {$task->id} \n");
+                Log::info("Can`t relation from task id: $task->id \n");
                 continue;
             }
 

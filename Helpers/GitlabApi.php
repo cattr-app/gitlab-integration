@@ -14,7 +14,7 @@ class GitlabApi
 {
     protected User $user;
     protected string $apiUrl;
-    protected string $apiKey;
+    protected ?string $apiKey;
     protected Client $client;
     protected ResultPager $pager;
 
@@ -29,12 +29,25 @@ class GitlabApi
 
     protected function init(User $user): ?GitlabApi
     {
+        Log::withContext([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->full_name,
+            ]
+        ]);
+
         $this->user = $user;
 
         $this->apiUrl = $this->settings->getApiUrl();
         $this->apiKey = UserProperties::getApiKey($user);
 
-        if (empty($this->apiUrl) || empty($this->apiKey)) {
+        if (empty($this->apiUrl)) {
+            Log::error('Gitlab api_url is not set up');
+            return null;
+        }
+
+        if(empty($this->apiKey)){
+            Log::error('User don\'t have api_key configured');
             return null;
         }
 
@@ -45,7 +58,7 @@ class GitlabApi
             $this->pager = new ResultPager($this->client);
             $this->pager->fetch($this->client->users(), 'me');
         } catch (Throwable $throwable) {
-            if ($throwable->getMessage() === 'invalid_token' || strpos($throwable->getMessage(), 'Token is expired') !== false) {
+            if ($throwable->getMessage() === 'invalid_token' || str_contains($throwable->getMessage(), 'Token is expired')) {
                 UserProperties::removeApiKey($user);
                 Log::info('Removing user GitLab API key due to expiration of key');
             } elseif (strpos($throwable->getMessage(), 'Your account has been blocked')) {

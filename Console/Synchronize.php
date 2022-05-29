@@ -56,19 +56,11 @@ class Synchronize extends Command
         $this->withProgressBar(
             UserProperties::getUsersWithApiKeys()->lazy(),
             static function (User $user) use ($self) {
-                Log::withContext([
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->full_name,
-                    ]
-                ]);
-
                 $api = GitlabApi::buildFromUser($user);
 
                 if (!$api) {
                     Log::error('Can`t instantiate an API for user');
                     $self->error(' Can`t instantiate an API for user');
-                    UserProperties::removeApiKey($user);
                     return;
                 }
 

@@ -29,9 +29,9 @@ class EventObserver
         );
     }
 
-    public function intervalCreation(TimeInterval $data): void
+    public function intervalCreation(TimeInterval $interval): void
     {
-        dispatch(static fn() => TimeIntervalsHelper::createUnsyncedInterval($data));
+        dispatch(static fn() => TimeIntervalsHelper::createUnsyncedInterval($interval));
     }
 
     public function subscribe(): array
