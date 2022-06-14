@@ -18,7 +18,7 @@ class UserProperties
 
     public static function getApiKey(User $user): ?string
     {
-        return rescue(decrypt(optional($user->properties()->firstWhere('name', '=', self::API_KEY))->value));
+        return rescue(static fn () => decrypt(optional($user->properties()->firstWhere('name', '=', self::API_KEY))->value));
     }
 
     public static function setApiKey(User $user, string $key): Model
