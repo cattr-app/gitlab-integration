@@ -3,13 +3,14 @@
 namespace Modules\GitlabIntegration\Subscribers;
 
 use App\Models\TimeInterval;
+use App\Models\Task;
 use Illuminate\Support\Facades\DB;
 use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
 use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
 
 class EventObserver
 {
-    public function taskEdition(TimeInterval $data): void
+    public function taskEdition(Task $data): void
     {
         abort_if(
             DB::table('gitlab_tasks_relations')
