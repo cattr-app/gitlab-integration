@@ -123,15 +123,11 @@ class Synchronize extends Command
             static fn($query) => $query
                 ->whereRelation('users', 'id', $userID)
                 ->whereRelation('status', 'active', true)
-        )->get()->unique('gitlab_issue_iid');
+        );
 
         // Fetch closed Gitlab's tasks by iids, and get internal task ids
-        $iids = $relations->pluck('gitlab_issue_iid')->chunk(30)->toArray();
-
-        while (!empty($iids)) {
-            $iidsChunk = array_pop($iids);
-            $gitlabTasks = $api->getClosedUserTasks($iidsChunk);
-
+        $relations->chunk(30, static function($ids) use($api, $relations) {
+            $gitlabTasks = $api->getClosedUserTasks($ids->unique('gitlab_issue_iid')->pluck('gitlab_issue_iid')->toArray());
             $internalIds = $relations->whereIn('gitlab_id', Arr::pluck($gitlabTasks, 'id'))
                 ->pluck('task_id')->toArray();
 
@@ -140,7 +136,7 @@ class Synchronize extends Command
                     ->lazyById()
                     ->each(static fn(Task $task) => $task->status()->associate(Status::whereActive(true)->firstOrFail()));
             }
-        }
+        });
     }
 
     private function syncTasks(array $gitlabTasks, int $userID): void
