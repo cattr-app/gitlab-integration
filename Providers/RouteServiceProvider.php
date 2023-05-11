@@ -14,7 +14,7 @@ class RouteServiceProvider extends ServiceProvider
     {
         Route::middleware(['api', 'auth:sanctum'])
             ->as('integration.gitlab.')
-            ->prefix('integration/gitlab')
+            ->prefix('api/integration/gitlab')
             ->group(static function (Router $router) {
                 $router->get('/settings', [SettingsController::class, 'index'])->name('settings.index');
                 $router->patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
