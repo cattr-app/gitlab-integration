@@ -15,11 +15,11 @@ class ModuleServiceProvider extends ServiceProvider
     /**
      * @var string $moduleName
      */
-    protected string $moduleName = 'GitlabIntegration';
+    protected string $moduleName = 'CattrGitlabIntegration';
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(['./Database/Migrations']);
+        $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
 
         $this->commands([
             Synchronize::class,
