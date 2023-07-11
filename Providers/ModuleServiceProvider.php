@@ -3,6 +3,7 @@
 namespace Modules\GitlabIntegration\Providers;
 
 use Filter;
+use CatEvent;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Modules\GitlabIntegration\Console\Synchronize;
@@ -29,7 +30,11 @@ class ModuleServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->booting(static fn() => Event::subscribe(EventObserver::class));
-        $this->booting(static fn() => Filter::subscribe(FilterObserver::class));
+    }
+
+    public static function registerEvents (): void
+    {
+        CatEvent::subscribe(EventObserver::class);
+        Filter::subscribe(FilterObserver::class);
     }
 }
