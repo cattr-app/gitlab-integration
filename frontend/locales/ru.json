@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "gitlab": {
+      "label": "Gitlab Интеграция",
+      "enable": "Включить",
+      "url": "Gitlab URL",
+      "api_key": "API Ключ",
+      "period": {
+        "label": "Период синхронизации времени",
+        "never": "Никогда",
+        "five_minutes": "Каждые 5 минут",
+        "thirty_minutes": "Каждые 30 минут",
+        "hourly": "Каждый час",
+        "daily": "Каждый день"
+      },
+      "message": {
+        "integration_disabled": "Gitlab Интеграция не включена, пожалуйста, обратитесь к администратору."
+      }
+    }
+  }
+}

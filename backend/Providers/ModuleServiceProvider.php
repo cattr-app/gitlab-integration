@@ -20,7 +20,7 @@ class ModuleServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
+        $this->loadMigrationsFrom(module_path($this->moduleName, 'backend/Database/Migrations'));
 
         $this->commands([
             Synchronize::class,

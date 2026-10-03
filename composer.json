@@ -6,7 +6,7 @@
   "authors": [
     {
       "name": "Alex V",
-      "email": "alex@cattr.app",
+      "email": "inbox@alexv-pro.ru",
       "role": "Maintainer"
     },
     {
@@ -21,15 +21,12 @@
     }
   ],
   "support": {
-    "email": "git+cattr-core-modules-gitlab-backend-273-issue-@amazingcat.net",
-    "forum": "https://community.cattr.app/public/",
-    "issues": "https://git.amazingcat.net/cattr/core/modules/gitlab/backend/-/issues",
-    "chat": "https://cattr.app",
-    "source": "https://git.amazingcat.net/cattr/core/modules/gitlab/backend"
+    "issues": "https://github.com/cattr-app/gitlab-integration/issues",
+    "source": "https://github.com/cattr-app/gitlab-integration"
   },
   "autoload": {
     "psr-4": {
-      "Modules\\GitlabIntegration\\": ""
+      "Modules\\GitlabIntegration\\": "backend/"
     }
   },
   "require": {
@@ -39,3 +36,4 @@
     "roave/security-advisories": "dev-latest"
   }
 }
+
