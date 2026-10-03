@@ -1,0 +1,67 @@
+name: Publish frontend to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+          run_install: false
+
+      - name: Set package version from Git
+        id: version
+        run: |
+          pnpm version from-git --no-git-tag-version
+          version="$(node -p "require('./package.json').version")"
+          if [ "$version" != "${RELEASE_TAG#v}" ]; then
+            echo "Package version $version does not match release tag $RELEASE_TAG" >&2
+            exit 1
+          fi
+          tag=latest
+          if [ "$RELEASE_PRERELEASE" = true ] || [[ "$version" == *-* ]]; then
+            tag=next
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare package
+        run: pnpm pack --dry-run
+
+      - name: Publish package
+        run: pnpm publish --no-git-checks --access public --tag "$NPM_DIST_TAG"
+        env:
+          NPM_DIST_TAG: ${{ steps.version.outputs.tag }}
