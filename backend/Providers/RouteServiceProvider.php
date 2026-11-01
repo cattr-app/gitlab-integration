@@ -2,16 +2,20 @@
 
 namespace Modules\GitlabIntegration\Providers;
 
-use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
 use Modules\GitlabIntegration\Http\Controllers\SettingsController;
 use Modules\GitlabIntegration\Http\Controllers\UserSettingsController;
 
 class RouteServiceProvider extends ServiceProvider
 {
-    public function map(): void
+    public function boot(): void
     {
+        if ($this->app->routesAreCached()) {
+            return;
+        }
+
         Route::middleware(['api', 'auth:sanctum'])
             ->as('integration.gitlab.')
             ->prefix('api/integration/gitlab')
