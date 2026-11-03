@@ -42,7 +42,7 @@ export default {
                     key: 'url',
                     fieldOptions: {
                         type: 'input',
-                        placeholder: 'https://git.example.com',
+                        placeholder: 'settings.gitlab.url_placeholder',
                     },
                 },
                 {

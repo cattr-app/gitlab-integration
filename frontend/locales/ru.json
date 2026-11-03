@@ -4,6 +4,7 @@
       "label": "Gitlab Интеграция",
       "enable": "Включить",
       "url": "Gitlab URL",
+      "url_placeholder": "https://git.example.com",
       "api_key": "API Ключ",
       "period": {
         "label": "Период синхронизации времени",
