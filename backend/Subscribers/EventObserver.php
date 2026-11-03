@@ -10,6 +10,9 @@ use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
 
 class EventObserver
 {
+    /** @var array<int, int|null> Previous task_id by interval id, captured before bulk edit saves */
+    private static array $previousTaskIds = [];
+
     public function taskEdition(Task $data): void
     {
         abort_if(
@@ -35,12 +38,35 @@ class EventObserver
         dispatch(static fn() => TimeIntervalsHelper::createUnsyncedInterval($interval));
     }
 
+    public function intervalsBulkEditing(array $data): void
+    {
+        foreach ($data[0] as $interval) {
+            self::$previousTaskIds[$interval->id] = $interval->getOriginal('task_id');
+        }
+    }
+
+    public function intervalsBulkEdited(array $data): void
+    {
+        foreach ($data[0] as $interval) {
+            $previousTaskId = self::$previousTaskIds[$interval->id] ?? null;
+
+            if ($previousTaskId === null || $previousTaskId === $interval->task_id) {
+                continue;
+            }
+
+            ReassignTaskToEditedInterval::dispatch($interval, $previousTaskId);
+        }
+
+        self::$previousTaskIds = [];
+    }
+
     public function subscribe(): array
     {
         return [
             'event.before.action.tasks.edit' => [[__CLASS__, 'taskEdition']],
             'event.before.action.task.destroy' => [[__CLASS__, 'taskDeletion']],
-            'event.after.action.intervals.edit' => [ReassignTaskToEditedInterval::class],
+            'event.before.action.intervals.edit.bulk' => [[__CLASS__, 'intervalsBulkEditing']],
+            'event.after.action.intervals.edit.bulk' => [[__CLASS__, 'intervalsBulkEdited']],
             'event.after.action.intervals.create' => [[__CLASS__, 'intervalCreation']]
         ];
     }

@@ -22,11 +22,11 @@ class ReassignTaskToEditedInterval implements ShouldQueue, ShouldBeUnique
     use Dispatchable, InteractsWithQueue, Queueable;
 
     public int $uniqueFor = 60;
-    private TimeInterval $interval;
 
-    public function __construct(protected array $data)
-    {
-        $this->interval = $data[0];
+    public function __construct(
+        private TimeInterval $interval,
+        private int $previousTaskId,
+    ) {
     }
 
     public function uniqueId(): string
@@ -40,7 +40,7 @@ class ReassignTaskToEditedInterval implements ShouldQueue, ShouldBeUnique
     public function handle(): void
     {
         // Do nothing if the previous and the new task are the same
-        if ($this->interval->getOriginal('task_id') === $this->interval->task_id) {
+        if ($this->previousTaskId === $this->interval->task_id) {
             return;
         }
 
@@ -84,9 +84,10 @@ class ReassignTaskToEditedInterval implements ShouldQueue, ShouldBeUnique
         $duration = Carbon::parse($this->interval->end_at)->diffInSeconds($this->interval->start_at);
 
         $interval = $this->interval;
+        $previousTaskId = $this->previousTaskId;
 
-        DB::transaction(static function() use ($interval, $duration, $api) {
-            $prevTaskRel = TaskRelation::whereTaskId($interval->getOriginal('task_id'))->firstOrFail();
+        DB::transaction(static function() use ($interval, $previousTaskId, $duration, $api) {
+            $prevTaskRel = TaskRelation::whereTaskId($previousTaskId)->firstOrFail();
             $projRel = ProjectRelation::whereProjectId($prevTaskRel->task->project_id)->firstOrFail();
 
             $time = $api->getUserTime($projRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
