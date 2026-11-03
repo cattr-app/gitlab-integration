@@ -34,9 +34,12 @@ class TimeIntervalsHelper
             ->first();
     }
 
-    public static function markAsSyncedIntervalByTaskId(int $taskId): int
+    /**
+     * @param int[] $intervalIds
+     */
+    public static function markAsSyncedIntervals(array $intervalIds): int
     {
-        return DB::table(self::GIS_TABLE)->where('task_id', '=', $taskId)->update([
+        return DB::table(self::GIS_TABLE)->whereIn('time_interval_id', $intervalIds)->update([
             'is_synced' => 1
         ]);
     }
