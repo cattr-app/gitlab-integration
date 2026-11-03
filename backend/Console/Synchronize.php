@@ -81,6 +81,7 @@ class Synchronize extends Command
                 }
 
                 $self->checkClosedTasks($api, $user->id);
+                $self->unassignRemovedTasks($api, $user->id, $gitlabTasks);
                 $self->syncTasks($gitlabTasks, $user->id);
             }
         );
@@ -137,6 +138,34 @@ class Synchronize extends Command
                     ->each(static fn(Task $task) => $task->status()->associate(Status::whereActive(true)->firstOrFail()));
             }
         });
+    }
+
+    /**
+     * Detach the user from tasks whose GitLab issue is neither open nor closed
+     * for them anymore, i.e. the issue was unassigned or reassigned.
+     */
+    private function unassignRemovedTasks(GitlabApi $api, int $userID, array $gitlabTasks): void
+    {
+        TaskRelation::whereHas(
+            'task',
+            static fn($query) => $query->whereRelation('users', 'id', $userID)
+        )
+            ->whereNotIn('gitlab_id', Arr::pluck($gitlabTasks, 'id'))
+            ->get()
+            ->chunk(30)
+            ->each(static function ($relations) use ($api, $userID) {
+                try {
+                    $closed = $api->getClosedUserTasks($relations->pluck('gitlab_issue_iid')->unique()->all());
+                } catch (Throwable $throwable) {
+                    // Without the closed list we can't tell closed issues from unassigned ones
+                    Log::error('Closed tasks cant be fetched for user: ' . $throwable->getMessage());
+                    return;
+                }
+
+                $relations
+                    ->whereNotIn('gitlab_id', Arr::pluck($closed, 'id'))
+                    ->each(static fn(TaskRelation $relation) => $relation->task->users()->detach($userID));
+            });
     }
 
     private function syncTasks(array $gitlabTasks, int $userID): void
