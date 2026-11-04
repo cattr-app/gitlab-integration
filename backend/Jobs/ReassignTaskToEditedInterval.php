@@ -160,9 +160,20 @@ class ReassignTaskToEditedInterval implements ShouldQueue
                     $duration
                 );
 
-                DB::table(TimeIntervalsHelper::GIA_TABLE)
-                    ->where('time_interval_id', $this->interval->id)
-                    ->update(['task_id' => $this->interval->task_id]);
+                try {
+                    DB::table(TimeIntervalsHelper::GIA_TABLE)
+                        ->where('time_interval_id', $this->interval->id)
+                        ->update(['task_id' => $this->interval->task_id]);
+                } catch (Throwable $e) {
+                    // GitLab is already updated: a retry would move the time a second time
+                    $this->failPermanently($e, 'Assignment record was not updated after a successful move', [
+                        'from_project' => $prevProjRel->gitlab_id,
+                        'from_issue_iid' => $prevTaskRel->gitlab_issue_iid,
+                        'to_project' => $newProjRel->gitlab_id,
+                        'to_issue_iid' => $newTaskRel->gitlab_issue_iid,
+                        'to_task_id' => $this->interval->task_id,
+                    ]);
+                }
             }
         );
     }
@@ -177,8 +188,10 @@ class ReassignTaskToEditedInterval implements ShouldQueue
     {
         // Nothing has changed yet: a failure here is safe to retry
         $original = $api->getUserTime($oldProject, $oldIid);
+        $destinationBefore = $api->getUserTime($newProject, $newIid);
         $api->resetUserTime($oldProject, $oldIid);
 
+        // Compensation rewrites the old issue's total from scratch, so it is correct whether or not this add was applied
         try {
             $this->sendOrThrow($api, $oldProject, $oldIid, $original - $duration);
         } catch (Throwable $e) {
@@ -188,6 +201,36 @@ class ReassignTaskToEditedInterval implements ShouldQueue
         try {
             $this->sendOrThrow($api, $newProject, $newIid, $duration);
         } catch (Throwable $e) {
+            // The response may have been lost after GitLab applied the add, so verify instead of assuming
+            try {
+                $destinationAfter = $api->getUserTime($newProject, $newIid);
+            } catch (Throwable $verifyError) {
+                $this->failPermanently($e, 'Could not verify the destination issue after a failed add', [
+                    'to_project' => $newProject,
+                    'to_issue_iid' => $newIid,
+                    'from_project' => $oldProject,
+                    'from_issue_iid' => $oldIid,
+                    'original_total_seconds' => $original,
+                    'verify_error' => $verifyError->getMessage(),
+                ]);
+            }
+
+            if ($destinationAfter === $destinationBefore + $duration) {
+                return; // applied, only the response was lost
+            }
+
+            if ($destinationAfter !== $destinationBefore) {
+                $this->failPermanently($e, 'Destination issue total changed unexpectedly', [
+                    'to_project' => $newProject,
+                    'to_issue_iid' => $newIid,
+                    'total_before' => $destinationBefore,
+                    'total_after' => $destinationAfter,
+                    'from_project' => $oldProject,
+                    'from_issue_iid' => $oldIid,
+                    'original_total_seconds' => $original,
+                ]);
+            }
+
             $this->compensate($api, $e, [$oldProject, $oldIid, $original]);
         }
     }
@@ -207,19 +250,31 @@ class ReassignTaskToEditedInterval implements ShouldQueue
             $api->resetUserTime($project, $iid);
             $this->sendOrThrow($api, $project, $iid, $original);
         } catch (Throwable $restoreError) {
-            Log::critical('Failed to restore GitLab issue time after a failed move, manual reconciliation required', [
-                'interval' => $this->interval->id,
+            $this->failPermanently($cause, 'Failed to restore GitLab issue time after a failed move', [
                 'project' => $project,
                 'issue_iid' => $iid,
                 'original_total_seconds' => $original,
-                'cause' => $cause->getMessage(),
                 'restore_error' => $restoreError->getMessage(),
             ]);
-
-            $this->fail($cause);
-
-            throw $cause;
         }
+
+        throw $cause;
+    }
+
+    /**
+     * Log everything needed for manual reconciliation and fail the job without further retries
+     *
+     * @param array<string, mixed> $context
+     * @throws Throwable
+     */
+    private function failPermanently(Throwable $cause, string $reason, array $context): never
+    {
+        Log::critical("$reason, manual reconciliation required", $context + [
+            'interval' => $this->interval->id,
+            'cause' => $cause->getMessage(),
+        ]);
+
+        $this->fail($cause);
 
         throw $cause;
     }
