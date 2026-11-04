@@ -4,6 +4,7 @@ namespace Modules\GitlabIntegration\Subscribers;
 
 use App\Models\TimeInterval;
 use App\Models\Task;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
 use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
@@ -38,16 +39,16 @@ class EventObserver
         dispatch(static fn() => TimeIntervalsHelper::createUnsyncedInterval($interval));
     }
 
-    public function intervalsBulkEditing(array $data): void
+    public function intervalsBulkEditing(Collection $intervals, mixed $request = null): void
     {
-        foreach ($data[0] as $interval) {
+        foreach ($intervals as $interval) {
             self::$previousTaskIds[$interval->id] = $interval->getOriginal('task_id');
         }
     }
 
-    public function intervalsBulkEdited(array $data): void
+    public function intervalsBulkEdited(Collection $intervals, mixed $request = null): void
     {
-        foreach ($data[0] as $interval) {
+        foreach ($intervals as $interval) {
             $previousTaskId = self::$previousTaskIds[$interval->id] ?? null;
 
             if ($previousTaskId === null || $previousTaskId === $interval->task_id) {

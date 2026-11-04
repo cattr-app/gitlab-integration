@@ -5,11 +5,11 @@ namespace Modules\GitlabIntegration\Jobs;
 use App\Models\TimeInterval;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Log;
 use Modules\GitlabIntegration\Entities\ProjectRelation;
@@ -17,21 +17,14 @@ use Modules\GitlabIntegration\Entities\TaskRelation;
 use Modules\GitlabIntegration\Helpers\GitlabApi;
 use Throwable;
 
-class ReassignTaskToEditedInterval implements ShouldQueue, ShouldBeUnique
+class ReassignTaskToEditedInterval implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable;
-
-    public int $uniqueFor = 60;
 
     public function __construct(
         private TimeInterval $interval,
         private int $previousTaskId,
     ) {
-    }
-
-    public function uniqueId(): string
-    {
-        return $this->interval->id;
     }
 
     /**
@@ -84,16 +77,23 @@ class ReassignTaskToEditedInterval implements ShouldQueue, ShouldBeUnique
         $duration = Carbon::parse($this->interval->end_at)->diffInSeconds($this->interval->start_at);
 
         $interval = $this->interval;
-        $previousTaskId = $this->previousTaskId;
 
-        DB::transaction(static function() use ($interval, $previousTaskId, $duration, $api) {
-            $prevTaskRel = TaskRelation::whereTaskId($previousTaskId)->firstOrFail();
-            $projRel = ProjectRelation::whereProjectId($prevTaskRel->task->project_id)->firstOrFail();
+        $prevTaskRel = TaskRelation::whereTaskId($previousTaskId)->firstOrFail();
+        $prevProjRel = ProjectRelation::whereProjectId($prevTaskRel->task->project_id)->firstOrFail();
 
-            $time = $api->getUserTime($projRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
-            $api->resetUserTime($projRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
-            $api->sendUserTime($projRel->gitlab_id, $prevTaskRel->gitlab_issue_iid, ($time - $duration) . 's');
-        });
+        // Read-reset-add on the old issue must not interleave with other jobs for the same issue
+        Cache::lock("gitlab-issue-time:{$prevProjRel->gitlab_id}:{$prevTaskRel->gitlab_issue_iid}", 120)
+            ->block(60, static function () use ($prevProjRel, $prevTaskRel, $duration, $api) {
+                DB::transaction(static function () use ($prevProjRel, $prevTaskRel, $duration, $api) {
+                    $time = $api->getUserTime($prevProjRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
+                    $api->resetUserTime($prevProjRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
+                    $api->sendUserTime(
+                        $prevProjRel->gitlab_id,
+                        $prevTaskRel->gitlab_issue_iid,
+                        ($time - $duration) . 's'
+                    );
+                });
+            });
 
         DB::transaction(static function() use ($interval, $duration, $api) {
             $newTaskRel = TaskRelation::whereTaskId($interval->task_id)->firstOrFail();
