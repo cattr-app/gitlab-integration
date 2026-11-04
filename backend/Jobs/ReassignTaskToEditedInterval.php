@@ -9,6 +9,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -18,11 +19,18 @@ use Modules\GitlabIntegration\Entities\ProjectRelation;
 use Modules\GitlabIntegration\Entities\TaskRelation;
 use Modules\GitlabIntegration\Helpers\GitlabApi;
 use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
+use RuntimeException;
 use Throwable;
 
 class ReassignTaskToEditedInterval implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /** Skip the job if the interval was deleted before it ran */
+    public bool $deleteWhenMissingModels = true;
+
+    /** Retries are only safe while GitLab state is untouched; do not loop on repeated failures */
+    public int $maxExceptions = 3;
 
     private const LOCK_TTL = 120;
     private const LOCK_WAIT = 60;
@@ -37,8 +45,9 @@ class ReassignTaskToEditedInterval implements ShouldQueue
     }
 
     /**
-     * Never process the same interval concurrently. Order of jobs does not matter: every job moves the interval's time
-     * from the task GitLab currently has it on to the interval's current task.
+     * Never process the same interval concurrently. Order of jobs does not matter: the interval is reloaded from the
+     * database for every attempt (SerializesModels), and the job moves its time from the task GitLab currently has
+     * it on to the interval's current task.
      *
      * @return list<object>
      */
@@ -124,6 +133,8 @@ class ReassignTaskToEditedInterval implements ShouldQueue
             Log::warning('Can`t instantiate an API for user');
 
             $this->fail();
+
+            return;
         }
 
         $duration = Carbon::parse($this->interval->end_at)->diffInSeconds($this->interval->start_at);
@@ -140,24 +151,88 @@ class ReassignTaskToEditedInterval implements ShouldQueue
                 "gitlab-issue-time:{$newProjRel->gitlab_id}:{$newTaskRel->gitlab_issue_iid}",
             ],
             function () use ($prevProjRel, $prevTaskRel, $newProjRel, $newTaskRel, $duration, $api) {
-                DB::transaction(static function () use ($prevProjRel, $prevTaskRel, $duration, $api) {
-                    $time = $api->getUserTime($prevProjRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
-                    $api->resetUserTime($prevProjRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
-                    $api->sendUserTime(
-                        $prevProjRel->gitlab_id,
-                        $prevTaskRel->gitlab_issue_iid,
-                        ($time - $duration) . 's'
-                    );
-                });
-
-                DB::transaction(static function () use ($newProjRel, $newTaskRel, $duration, $api) {
-                    $api->sendUserTime($newProjRel->gitlab_id, $newTaskRel->gitlab_issue_iid, $duration . 's');
-                });
+                $this->moveTime(
+                    $api,
+                    $prevProjRel->gitlab_id,
+                    $prevTaskRel->gitlab_issue_iid,
+                    $newProjRel->gitlab_id,
+                    $newTaskRel->gitlab_issue_iid,
+                    $duration
+                );
 
                 DB::table(TimeIntervalsHelper::GIA_TABLE)
                     ->where('time_interval_id', $this->interval->id)
                     ->update(['task_id' => $this->interval->task_id]);
             }
         );
+    }
+
+    /**
+     * Move $duration seconds from one issue to another. GitLab has no transactions, so a failure after the old issue
+     * was touched is compensated; if even that fails the job is failed for good (no blind retry) and the state is logged.
+     *
+     * @throws Throwable
+     */
+    private function moveTime(GitlabApi $api, $oldProject, $oldIid, $newProject, $newIid, int $duration): void
+    {
+        // Nothing has changed yet: a failure here is safe to retry
+        $original = $api->getUserTime($oldProject, $oldIid);
+        $api->resetUserTime($oldProject, $oldIid);
+
+        try {
+            $this->sendOrThrow($api, $oldProject, $oldIid, $original - $duration);
+        } catch (Throwable $e) {
+            $this->compensate($api, $e, [$oldProject, $oldIid, $original]);
+        }
+
+        try {
+            $this->sendOrThrow($api, $newProject, $newIid, $duration);
+        } catch (Throwable $e) {
+            $this->compensate($api, $e, [$oldProject, $oldIid, $original]);
+        }
+    }
+
+    /**
+     * Restore the old issue's total. On success the exception is rethrown (state is back to the start, retry is safe),
+     * otherwise the job fails permanently.
+     *
+     * @param array{0: mixed, 1: mixed, 2: int} $oldIssue
+     * @throws Throwable
+     */
+    private function compensate(GitlabApi $api, Throwable $cause, array $oldIssue): void
+    {
+        [$project, $iid, $original] = $oldIssue;
+
+        try {
+            $api->resetUserTime($project, $iid);
+            $this->sendOrThrow($api, $project, $iid, $original);
+        } catch (Throwable $restoreError) {
+            Log::critical('Failed to restore GitLab issue time after a failed move, manual reconciliation required', [
+                'interval' => $this->interval->id,
+                'project' => $project,
+                'issue_iid' => $iid,
+                'original_total_seconds' => $original,
+                'cause' => $cause->getMessage(),
+                'restore_error' => $restoreError->getMessage(),
+            ]);
+
+            $this->fail($cause);
+
+            throw $cause;
+        }
+
+        throw $cause;
+    }
+
+    /**
+     * GitlabApi::sendUserTime() swallows errors and returns null
+     *
+     * @throws RuntimeException
+     */
+    private function sendOrThrow(GitlabApi $api, $project, $iid, int $seconds): void
+    {
+        if ($api->sendUserTime($project, $iid, $seconds . 's') === null) {
+            throw new RuntimeException('GitLab rejected spent time update');
+        }
     }
 }
