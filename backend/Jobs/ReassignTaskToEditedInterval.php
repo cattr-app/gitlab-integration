@@ -8,6 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Closure;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -24,16 +25,10 @@ class ReassignTaskToEditedInterval implements ShouldQueue
 
     private const LOCK_TTL = 120;
     private const LOCK_WAIT = 60;
-    private const ORDER_RETRY_DELAY = 10;
-    private const ORDER_STATE_TTL_DAYS = 1;
 
-    /**
-     * @param int $sequence Per-interval move number; moves of one interval are applied strictly in this order (0 = unordered)
-     */
     public function __construct(
         private TimeInterval $interval,
         private int $previousTaskId,
-        private int $sequence = 0,
     ) {
     }
 
@@ -42,14 +37,14 @@ class ReassignTaskToEditedInterval implements ShouldQueue
         return now()->addHour();
     }
 
-    public static function sequenceKey(int $intervalId): string
+    /**
+     * Never process two moves of the same interval at the same time
+     *
+     * @return list<object>
+     */
+    public function middleware(): array
     {
-        return "gitlab-interval-move-seq:{$intervalId}";
-    }
-
-    private function doneKey(): string
-    {
-        return "gitlab-interval-move-done:{$this->interval->id}";
+        return [(new WithoutOverlapping($this->interval->id))->releaseAfter(10)->expireAfter(300)];
     }
 
     /**
@@ -57,28 +52,7 @@ class ReassignTaskToEditedInterval implements ShouldQueue
      */
     public function handle(): void
     {
-        // Wait until all earlier moves of this interval have been applied
-        if ($this->sequence > (int)Cache::get($this->doneKey(), 0) + 1) {
-            $this->release(self::ORDER_RETRY_DELAY);
-
-            return;
-        }
-
         $this->reassign();
-        $this->markDone();
-    }
-
-    /** Unblock later moves of this interval when this one has permanently failed */
-    public function failed(?Throwable $exception = null): void
-    {
-        $this->markDone();
-    }
-
-    private function markDone(): void
-    {
-        if ($this->sequence > 0) {
-            Cache::put($this->doneKey(), $this->sequence, now()->addDays(self::ORDER_STATE_TTL_DAYS));
-        }
     }
 
     /**
