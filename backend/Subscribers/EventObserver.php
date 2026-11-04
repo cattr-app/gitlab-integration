@@ -65,7 +65,7 @@ class EventObserver
     {
         return [
             'event.before.action.tasks.edit' => [[__CLASS__, 'taskEdition']],
-            'event.before.action.task.destroy' => [[__CLASS__, 'taskDeletion']],
+            'event.before.action.tasks.destroy' => [[__CLASS__, 'taskDeletion']],
             'event.before.action.intervals.edit.bulk' => [[__CLASS__, 'intervalsBulkEditing']],
             'event.after.action.intervals.edit.bulk' => [[__CLASS__, 'intervalsBulkEdited']],
             'event.after.action.intervals.create' => [[__CLASS__, 'intervalCreation']]

@@ -1,5 +1,4 @@
 import axios from '@/config/app';
-import Store from '@/store';
 
 /**
  * Section service class.
