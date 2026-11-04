@@ -5,6 +5,7 @@ namespace Modules\GitlabIntegration\Subscribers;
 use App\Models\TimeInterval;
 use App\Models\Task;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
 use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
@@ -55,7 +56,11 @@ class EventObserver
                 continue;
             }
 
-            ReassignTaskToEditedInterval::dispatch($interval, $previousTaskId);
+            // Number the move so that successive moves of one interval are applied in order
+            $key = ReassignTaskToEditedInterval::sequenceKey($interval->id);
+            Cache::add($key, 0, now()->addDays(1));
+
+            ReassignTaskToEditedInterval::dispatch($interval, $previousTaskId, Cache::increment($key));
         }
 
         self::$previousTaskIds = [];
