@@ -63,7 +63,7 @@ class SynchronizeTime extends Command
                     if ($response !== null) {
                         $self->info("Sent {$durations[$taskId]['humanDuration']} spent");
                         if ($response && isset($response['total_time_spent'])) {
-                            TimeIntervalsHelper::markAsSyncedIntervalByTaskId($taskId);
+                            TimeIntervalsHelper::markAsSyncedIntervals($groupedIntervals[$taskId]->pluck('id')->all());
                         }
                     }
                 }
