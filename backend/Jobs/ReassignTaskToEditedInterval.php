@@ -4,12 +4,12 @@ namespace Modules\GitlabIntegration\Jobs;
 
 use App\Models\TimeInterval;
 use App\Models\User;
+use Closure;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Closure;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +17,7 @@ use Log;
 use Modules\GitlabIntegration\Entities\ProjectRelation;
 use Modules\GitlabIntegration\Entities\TaskRelation;
 use Modules\GitlabIntegration\Helpers\GitlabApi;
+use Modules\GitlabIntegration\Helpers\TimeIntervalsHelper;
 use Throwable;
 
 class ReassignTaskToEditedInterval implements ShouldQueue
@@ -26,10 +27,8 @@ class ReassignTaskToEditedInterval implements ShouldQueue
     private const LOCK_TTL = 120;
     private const LOCK_WAIT = 60;
 
-    public function __construct(
-        private TimeInterval $interval,
-        private int $previousTaskId,
-    ) {
+    public function __construct(private TimeInterval $interval)
+    {
     }
 
     public function retryUntil(): \DateTimeInterface
@@ -38,7 +37,8 @@ class ReassignTaskToEditedInterval implements ShouldQueue
     }
 
     /**
-     * Never process two moves of the same interval at the same time
+     * Never process the same interval concurrently. Order of jobs does not matter: every job moves the interval's time
+     * from the task GitLab currently has it on to the interval's current task.
      *
      * @return list<object>
      */
@@ -79,8 +79,13 @@ class ReassignTaskToEditedInterval implements ShouldQueue
      */
     private function reassign(): void
     {
-        // Do nothing if the previous and the new task are the same
-        if ($this->previousTaskId === $this->interval->task_id) {
+        // Task whose GitLab issue holds the interval's time now (recorded before the first edit after sync)
+        $assignment = DB::table(TimeIntervalsHelper::GIA_TABLE)
+            ->where('time_interval_id', $this->interval->id)
+            ->first();
+
+        // Do nothing if the interval is not tracked in GitLab or is already on its current task
+        if ($assignment === null || (int)$assignment->task_id === $this->interval->task_id) {
             return;
         }
 
@@ -123,7 +128,7 @@ class ReassignTaskToEditedInterval implements ShouldQueue
 
         $duration = Carbon::parse($this->interval->end_at)->diffInSeconds($this->interval->start_at);
 
-        $prevTaskRel = TaskRelation::whereTaskId($this->previousTaskId)->firstOrFail();
+        $prevTaskRel = TaskRelation::whereTaskId($assignment->task_id)->firstOrFail();
         $prevProjRel = ProjectRelation::whereProjectId($prevTaskRel->task->project_id)->firstOrFail();
         $newTaskRel = TaskRelation::whereTaskId($this->interval->task_id)->firstOrFail();
         $newProjRel = ProjectRelation::whereProjectId($newTaskRel->task->project_id)->firstOrFail();
@@ -134,7 +139,7 @@ class ReassignTaskToEditedInterval implements ShouldQueue
                 "gitlab-issue-time:{$prevProjRel->gitlab_id}:{$prevTaskRel->gitlab_issue_iid}",
                 "gitlab-issue-time:{$newProjRel->gitlab_id}:{$newTaskRel->gitlab_issue_iid}",
             ],
-            static function () use ($prevProjRel, $prevTaskRel, $newProjRel, $newTaskRel, $duration, $api) {
+            function () use ($prevProjRel, $prevTaskRel, $newProjRel, $newTaskRel, $duration, $api) {
                 DB::transaction(static function () use ($prevProjRel, $prevTaskRel, $duration, $api) {
                     $time = $api->getUserTime($prevProjRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
                     $api->resetUserTime($prevProjRel->gitlab_id, $prevTaskRel->gitlab_issue_iid);
@@ -148,6 +153,10 @@ class ReassignTaskToEditedInterval implements ShouldQueue
                 DB::transaction(static function () use ($newProjRel, $newTaskRel, $duration, $api) {
                     $api->sendUserTime($newProjRel->gitlab_id, $newTaskRel->gitlab_issue_iid, $duration . 's');
                 });
+
+                DB::table(TimeIntervalsHelper::GIA_TABLE)
+                    ->where('time_interval_id', $this->interval->id)
+                    ->update(['task_id' => $this->interval->task_id]);
             }
         );
     }

@@ -12,6 +12,7 @@ class TimeIntervalsHelper
 {
     public const GIS_TABLE = 'gitlab_intervals_sync';
     public const GTR_TABLE = 'gitlab_tasks_relations';
+    public const GIA_TABLE = 'gitlab_interval_assignments';
     public const GPR_TABLE = 'gitlab_projects_relations';
 
     public static function createUnsyncedInterval(TimeInterval $interval): TimeInterval
@@ -25,6 +26,27 @@ class TimeIntervalsHelper
         }
 
         return $interval;
+    }
+
+    /**
+     * Remember which task's GitLab issue holds the time of an already synced interval, before the interval is edited.
+     * The first remembered value wins: it is what GitLab really has, whatever happens to the interval afterwards.
+     */
+    public static function rememberSyncedAssignment(int $intervalId, ?int $taskId): void
+    {
+        if ($taskId === null || !self::getTasksById($taskId)) {
+            return;
+        }
+
+        $isUnsynced = DB::table(self::GIS_TABLE)
+            ->where(['time_interval_id' => $intervalId, 'is_synced' => false])
+            ->exists();
+
+        if ($isUnsynced) {
+            return;
+        }
+
+        DB::table(self::GIA_TABLE)->insertOrIgnore(['time_interval_id' => $intervalId, 'task_id' => $taskId]);
     }
 
     public static function getTasksById(int $taskId)

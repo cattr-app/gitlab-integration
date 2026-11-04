@@ -42,7 +42,10 @@ class EventObserver
     public function intervalsBulkEditing(Collection $intervals, mixed $request = null): void
     {
         foreach ($intervals as $interval) {
-            self::$previousTaskIds[$interval->id] = $interval->getOriginal('task_id');
+            $previousTaskId = $interval->getOriginal('task_id');
+
+            self::$previousTaskIds[$interval->id] = $previousTaskId;
+            TimeIntervalsHelper::rememberSyncedAssignment($interval->id, $previousTaskId);
         }
     }
 
@@ -55,7 +58,7 @@ class EventObserver
                 continue;
             }
 
-            ReassignTaskToEditedInterval::dispatch($interval, $previousTaskId);
+            ReassignTaskToEditedInterval::dispatch($interval);
         }
 
         self::$previousTaskIds = [];
