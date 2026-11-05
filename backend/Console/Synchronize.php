@@ -151,9 +151,7 @@ class Synchronize extends Command
             static fn($query) => $query->whereRelation('users', 'id', $userID)
         )
             ->whereNotIn('gitlab_id', Arr::pluck($gitlabTasks, 'id'))
-            ->get()
-            ->chunk(30)
-            ->each(static function ($relations) use ($api, $userID) {
+            ->chunkById(30, static function ($relations) use ($api, $userID) {
                 try {
                     $closed = $api->getClosedUserTasks($relations->pluck('gitlab_issue_iid')->unique()->all());
                 } catch (Throwable $throwable) {
@@ -164,7 +162,7 @@ class Synchronize extends Command
 
                 $relations
                     ->whereNotIn('gitlab_id', Arr::pluck($closed, 'id'))
-                    ->each(static fn(TaskRelation $relation) => $relation->task->users()->detach($userID));
+                    ->each(static fn(TaskRelation $relation) => $relation->task?->users()->detach($userID));
             });
     }
 
