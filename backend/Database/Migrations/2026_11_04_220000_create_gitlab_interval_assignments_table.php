@@ -16,6 +16,8 @@ class CreateGitlabIntervalAssignmentsTable extends Migration
         Schema::create('gitlab_interval_assignments', static function (Blueprint $table) {
             $table->unsignedBigInteger('time_interval_id')->primary();
             $table->unsignedBigInteger('task_id');
+            // Set when GitLab state is uncertain: no further moves of this interval until reconciled by hand
+            $table->boolean('needs_reconciliation')->default(false);
         });
     }
 

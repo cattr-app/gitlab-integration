@@ -41,6 +41,34 @@ class ReassignTaskToEditedInterval implements ShouldQueue
         return "gitlab-interval-reconcile-required:{$intervalId}";
     }
 
+    private function isBlocked(): bool
+    {
+        return Cache::has(self::blockedKey($this->interval->id))
+            || DB::table(TimeIntervalsHelper::GIA_TABLE)
+                ->where(['time_interval_id' => $this->interval->id, 'needs_reconciliation' => true])
+                ->exists();
+    }
+
+    /** Persist the block in the database and the cache; neither write may prevent failing the job */
+    private function blockInterval(): void
+    {
+        try {
+            DB::table(TimeIntervalsHelper::GIA_TABLE)
+                ->where('time_interval_id', $this->interval->id)
+                ->update(['needs_reconciliation' => true]);
+        } catch (Throwable $e) {
+            Log::critical('Could not persist the reconciliation block in the database', ['error' => $e->getMessage()]);
+        }
+
+        try {
+            if (!Cache::forever(self::blockedKey($this->interval->id), true)) {
+                Log::critical('Could not persist the reconciliation block in the cache');
+            }
+        } catch (Throwable $e) {
+            Log::critical('Could not persist the reconciliation block in the cache', ['error' => $e->getMessage()]);
+        }
+    }
+
     public function __construct(private TimeInterval $interval)
     {
     }
@@ -68,7 +96,7 @@ class ReassignTaskToEditedInterval implements ShouldQueue
     public function handle(): void
     {
         // A previous move left GitLab and the assignment record out of sync: do not stack another move on top of it
-        if (Cache::has(self::blockedKey($this->interval->id))) {
+        if ($this->isBlocked()) {
             Log::warning('Interval is blocked until manual reconciliation', ['interval' => $this->interval->id]);
 
             return;
@@ -150,7 +178,7 @@ class ReassignTaskToEditedInterval implements ShouldQueue
             return;
         }
 
-        $duration = Carbon::parse($this->interval->end_at)->diffInSeconds($this->interval->start_at);
+        $duration = (int)abs(Carbon::parse($this->interval->end_at)->diffInSeconds($this->interval->start_at));
 
         $prevTaskRel = TaskRelation::whereTaskId($assignment->task_id)->firstOrFail();
         $prevProjRel = ProjectRelation::whereProjectId($prevTaskRel->task->project_id)->firstOrFail();
@@ -202,6 +230,19 @@ class ReassignTaskToEditedInterval implements ShouldQueue
         // Nothing has changed yet: a failure here is safe to retry
         $original = $api->getUserTime($oldProject, $oldIid);
         $destinationBefore = $api->getUserTime($newProject, $newIid);
+
+        if ($original < $duration) {
+            $this->failPermanently(
+                new RuntimeException('Source issue holds less time than the interval'),
+                'Source issue holds less time than the interval being moved',
+                [
+                    'project' => $oldProject,
+                    'issue_iid' => $oldIid,
+                    'source_total_seconds' => $original,
+                    'interval_seconds' => $duration,
+                ]
+            );
+        }
 
         // Compensation rewrites the old issue's total from scratch, so it is correct whether or not the reset or
         // the add below were applied (a lost response must not leave the issue half-rewritten)
@@ -289,7 +330,7 @@ class ReassignTaskToEditedInterval implements ShouldQueue
             'cause' => $cause->getMessage(),
         ]);
 
-        Cache::forever(self::blockedKey($this->interval->id), true);
+        $this->blockInterval();
 
         $this->fail($cause);
 
