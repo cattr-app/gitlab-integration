@@ -35,6 +35,12 @@ class ReassignTaskToEditedInterval implements ShouldQueue
     private const LOCK_TTL = 120;
     private const LOCK_WAIT = 60;
 
+    /** Set when the assignment record could not be updated after a successful move; clear it after reconciling */
+    public static function blockedKey(int $intervalId): string
+    {
+        return "gitlab-interval-reconcile-required:{$intervalId}";
+    }
+
     public function __construct(private TimeInterval $interval)
     {
     }
@@ -61,6 +67,13 @@ class ReassignTaskToEditedInterval implements ShouldQueue
      */
     public function handle(): void
     {
+        // A previous move left GitLab and the assignment record out of sync: do not stack another move on top of it
+        if (Cache::has(self::blockedKey($this->interval->id))) {
+            Log::warning('Interval is blocked until manual reconciliation', ['interval' => $this->interval->id]);
+
+            return;
+        }
+
         $this->reassign();
     }
 
@@ -165,7 +178,8 @@ class ReassignTaskToEditedInterval implements ShouldQueue
                         ->where('time_interval_id', $this->interval->id)
                         ->update(['task_id' => $this->interval->task_id]);
                 } catch (Throwable $e) {
-                    // GitLab is already updated: a retry would move the time a second time
+                    // GitLab is already updated: neither a retry nor a later move may build on the stale record
+                    Cache::forever(self::blockedKey($this->interval->id), true);
                     $this->failPermanently($e, 'Assignment record was not updated after a successful move', [
                         'from_project' => $prevProjRel->gitlab_id,
                         'from_issue_iid' => $prevTaskRel->gitlab_issue_iid,

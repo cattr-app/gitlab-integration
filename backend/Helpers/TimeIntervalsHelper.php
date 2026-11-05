@@ -7,6 +7,7 @@ use App\Models\TimeInterval;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Log;
+use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
 
 class TimeIntervalsHelper
 {
@@ -64,6 +65,22 @@ class TimeIntervalsHelper
         return DB::table(self::GIS_TABLE)->whereIn('time_interval_id', $intervalIds)->update([
             'is_synced' => 1
         ]);
+    }
+
+    /**
+     * Intervals edited while the sync command was running were sent to the task they had when the command loaded them.
+     * Remember that task as the one GitLab holds and reassign them to their current task.
+     *
+     * @param int[] $intervalIds
+     */
+    public static function reconcileIntervalsEditedDuringSync(array $intervalIds, int $sentTaskId): void
+    {
+        $edited = TimeInterval::whereIn('id', $intervalIds)->where('task_id', '!=', $sentTaskId)->get();
+
+        foreach ($edited as $interval) {
+            DB::table(self::GIA_TABLE)->insertOrIgnore(['time_interval_id' => $interval->id, 'task_id' => $sentTaskId]);
+            ReassignTaskToEditedInterval::dispatch($interval);
+        }
     }
 
     public static function clearSyncedIntervals(): int
