@@ -7,11 +7,13 @@ use App\Models\TimeInterval;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Log;
+use Modules\GitlabIntegration\Jobs\ReassignTaskToEditedInterval;
 
 class TimeIntervalsHelper
 {
     public const GIS_TABLE = 'gitlab_intervals_sync';
     public const GTR_TABLE = 'gitlab_tasks_relations';
+    public const GIA_TABLE = 'gitlab_interval_assignments';
     public const GPR_TABLE = 'gitlab_projects_relations';
 
     public static function createUnsyncedInterval(TimeInterval $interval): TimeInterval
@@ -25,6 +27,27 @@ class TimeIntervalsHelper
         }
 
         return $interval;
+    }
+
+    /**
+     * Remember which task's GitLab issue holds the time of an already synced interval, before the interval is edited.
+     * The first remembered value wins: it is what GitLab really has, whatever happens to the interval afterwards.
+     */
+    public static function rememberSyncedAssignment(int $intervalId, ?int $taskId): void
+    {
+        if ($taskId === null || !self::getTasksById($taskId)) {
+            return;
+        }
+
+        $isUnsynced = DB::table(self::GIS_TABLE)
+            ->where(['time_interval_id' => $intervalId, 'is_synced' => false])
+            ->exists();
+
+        if ($isUnsynced) {
+            return;
+        }
+
+        DB::table(self::GIA_TABLE)->insertOrIgnore(['time_interval_id' => $intervalId, 'task_id' => $taskId]);
     }
 
     public static function getTasksById(int $taskId)
@@ -42,6 +65,27 @@ class TimeIntervalsHelper
         return DB::table(self::GIS_TABLE)->whereIn('time_interval_id', $intervalIds)->update([
             'is_synced' => 1
         ]);
+    }
+
+    /**
+     * Intervals edited while the sync command was running were sent to the task they had when the command loaded them.
+     * Remember that task as the one GitLab holds and reassign them to their current task.
+     *
+     * @param int[] $intervalIds
+     */
+    public static function reconcileIntervalsEditedDuringSync(array $intervalIds, int $sentTaskId): void
+    {
+        $edited = TimeInterval::whereIn('id', $intervalIds)->where('task_id', '!=', $sentTaskId)->get();
+
+        foreach ($edited as $interval) {
+            // Overwrite: the sync command knows exactly which task was credited, unlike an edit handler that
+            // may have recorded an intermediate task in the window between marking as synced and this call
+            DB::table(self::GIA_TABLE)->updateOrInsert(
+                ['time_interval_id' => $interval->id],
+                ['task_id' => $sentTaskId]
+            );
+            ReassignTaskToEditedInterval::dispatch($interval);
+        }
     }
 
     public static function clearSyncedIntervals(): int
