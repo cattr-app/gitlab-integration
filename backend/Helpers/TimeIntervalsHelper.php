@@ -78,7 +78,12 @@ class TimeIntervalsHelper
         $edited = TimeInterval::whereIn('id', $intervalIds)->where('task_id', '!=', $sentTaskId)->get();
 
         foreach ($edited as $interval) {
-            DB::table(self::GIA_TABLE)->insertOrIgnore(['time_interval_id' => $interval->id, 'task_id' => $sentTaskId]);
+            // Overwrite: the sync command knows exactly which task was credited, unlike an edit handler that
+            // may have recorded an intermediate task in the window between marking as synced and this call
+            DB::table(self::GIA_TABLE)->updateOrInsert(
+                ['time_interval_id' => $interval->id],
+                ['task_id' => $sentTaskId]
+            );
             ReassignTaskToEditedInterval::dispatch($interval);
         }
     }
