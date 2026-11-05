@@ -179,7 +179,6 @@ class ReassignTaskToEditedInterval implements ShouldQueue
                         ->update(['task_id' => $this->interval->task_id]);
                 } catch (Throwable $e) {
                     // GitLab is already updated: neither a retry nor a later move may build on the stale record
-                    Cache::forever(self::blockedKey($this->interval->id), true);
                     $this->failPermanently($e, 'Assignment record was not updated after a successful move', [
                         'from_project' => $prevProjRel->gitlab_id,
                         'from_issue_iid' => $prevTaskRel->gitlab_issue_iid,
@@ -203,10 +202,11 @@ class ReassignTaskToEditedInterval implements ShouldQueue
         // Nothing has changed yet: a failure here is safe to retry
         $original = $api->getUserTime($oldProject, $oldIid);
         $destinationBefore = $api->getUserTime($newProject, $newIid);
-        $api->resetUserTime($oldProject, $oldIid);
 
-        // Compensation rewrites the old issue's total from scratch, so it is correct whether or not this add was applied
+        // Compensation rewrites the old issue's total from scratch, so it is correct whether or not the reset or
+        // the add below were applied (a lost response must not leave the issue half-rewritten)
         try {
+            $api->resetUserTime($oldProject, $oldIid);
             $this->sendOrThrow($api, $oldProject, $oldIid, $original - $duration);
         } catch (Throwable $e) {
             $this->compensate($api, $e, [$oldProject, $oldIid, $original]);
@@ -276,7 +276,8 @@ class ReassignTaskToEditedInterval implements ShouldQueue
     }
 
     /**
-     * Log everything needed for manual reconciliation and fail the job without further retries
+     * Log everything needed for manual reconciliation, block further moves of the interval (the GitLab state is
+     * uncertain) and fail the job without further retries
      *
      * @param array<string, mixed> $context
      * @throws Throwable
@@ -287,6 +288,8 @@ class ReassignTaskToEditedInterval implements ShouldQueue
             'interval' => $this->interval->id,
             'cause' => $cause->getMessage(),
         ]);
+
+        Cache::forever(self::blockedKey($this->interval->id), true);
 
         $this->fail($cause);
 
@@ -300,6 +303,11 @@ class ReassignTaskToEditedInterval implements ShouldQueue
      */
     private function sendOrThrow(GitlabApi $api, $project, $iid, int $seconds): void
     {
+        // Nothing to add (the issue stays at 0 after the reset) and GitLab may reject zero/negative durations
+        if ($seconds <= 0) {
+            return;
+        }
+
         if ($api->sendUserTime($project, $iid, $seconds . 's') === null) {
             throw new RuntimeException('GitLab rejected spent time update');
         }
